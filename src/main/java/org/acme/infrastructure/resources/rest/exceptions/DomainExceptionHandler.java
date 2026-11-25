@@ -17,14 +17,10 @@ public class DomainExceptionHandler implements ExceptionMapper<DomainException> 
 
         if (exception instanceof NotFoundException) {
             status = Response.Status.NOT_FOUND;
-        }
-
-        if (exception instanceof NotAuthorizedException) {
+        } else if (exception instanceof NotAuthorizedException) {
             status = Response.Status.UNAUTHORIZED;
-        }
-
-        if (exception instanceof ServiceException) {
-            status = Response.Status.BAD_REQUEST;
+        } else if (exception instanceof ConflictException) {
+            status = Response.Status.CONFLICT;
         }
 
         ErrorResponse error = new ErrorResponse(
@@ -32,7 +28,8 @@ public class DomainExceptionHandler implements ExceptionMapper<DomainException> 
                 status.getStatusCode(),
                 LocalDateTime.now()
         );
-        Log.error(exception.getMessage(), exception);
+        // Errores esperables de negocio: sin stack trace en el log
+        Log.debugf("%s: %s", exception.getClass().getSimpleName(), exception.getMessage());
         return Response.status(status).entity(error).build();
     }
 }
