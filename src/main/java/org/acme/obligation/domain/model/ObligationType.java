@@ -1,0 +1,6 @@
+package org.acme.obligation.domain.model;
+
+public enum ObligationType {
+    INVOICE_PAYMENT, CREDIT_CARD_PAYMENT, TAX, INSURANCE, VEHICLE_INSPECTION,
+    DOCUMENT_RENEWAL, SUBSCRIPTION, MAINTENANCE, OTHER
+}
