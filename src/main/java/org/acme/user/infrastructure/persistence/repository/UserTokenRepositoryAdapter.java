@@ -40,8 +40,13 @@ public class UserTokenRepositoryAdapter implements UserTokenRepository {
     }
 
     @Override
+    public boolean markUsed(UUID tokenId, Instant when) {
+        return repository.update("usedAt = ?1 where id = ?2 and usedAt is null", when, tokenId) == 1;
+    }
+
+    @Override
     public int invalidateAll(UUID userId, UserTokenType type, Instant when) {
-        return repository.update("usedAt = ?1 where userId = ?2 and tokenType = ?3 and usedAt is null",
+        return repository.update("usedAt = ?1, expiresAt = ?1 where userId = ?2 and tokenType = ?3 and usedAt is null",
                 when, userId, type);
     }
 }

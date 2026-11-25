@@ -43,3 +43,6 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+# Claves JWT: nunca en el repo (generarlas con los comandos de .env.example)
+*.pem

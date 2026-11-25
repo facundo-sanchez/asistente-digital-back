@@ -4,6 +4,7 @@ import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.acme.domain.exceptions.ConflictException;
 import org.acme.domain.exceptions.NotAuthorizedException;
 import org.acme.user.application.model.AuthSession;
 import org.acme.user.application.port.output.PasswordHasher;
@@ -25,10 +26,11 @@ public class AuthenticationUseCase {
 
     static final String INVALID_CREDENTIALS = "Email o contraseña incorrectos";
     static final String INVALID_SESSION = "La sesión no es válida o expiró";
+    static final String ALREADY_ROTATED = "La sesión ya se renovó en otro pedido";
 
     /**
      * Si un refresh token ya usado vuelve a presentarse dentro de esta ventana se asume
-     * una carrera benigna (dos pestañas renovando a la vez) y solo se rechaza. Fuera de
+     * una carrera benigna (dos pestañas renovando a la vez) y se responde 409. Fuera de
      * la ventana se trata como robo del token: se cierran todas las sesiones del usuario.
      */
     static final Duration REUSE_GRACE = Duration.ofSeconds(30);
@@ -78,6 +80,10 @@ public class AuthenticationUseCase {
     /**
      * dontRollbackOn: si se detecta reutilización, la invalidación de todas las sesiones
      * debe persistir aunque la llamada termine en 401.
+     *
+     * @throws ConflictException si otro pedido acaba de renovar con este mismo token (dos
+     *         pestañas o llamadas en paralelo): la sesión sigue viva con las cookies nuevas,
+     *         el cliente no debe borrarlas.
      */
     @Transactional(dontRollbackOn = NotAuthorizedException.class)
     public AuthSession refresh(String rawRefreshToken) {
@@ -87,18 +93,15 @@ public class AuthenticationUseCase {
                 .orElseThrow(() -> new NotAuthorizedException(INVALID_SESSION));
 
         if (token.getUsedAt() != null) {
-            if (token.getUsedAt().plus(REUSE_GRACE).isBefore(now)) {
-                Log.warnf("Reutilización de refresh token del usuario %s: se cierran todas sus sesiones", token.getUserId());
-                tokens.invalidateAll(token.getUserId(), UserTokenType.REFRESH, now);
-            }
-            throw new NotAuthorizedException(INVALID_SESSION);
+            rejectReuse(token, now);
         }
         if (!token.getExpiresAt().isAfter(now)) {
             throw new NotAuthorizedException(INVALID_SESSION);
         }
-
-        token.setUsedAt(now);
-        tokens.save(token);
+        // Atómico: si dos pedidos llegan juntos, solo uno lo marca
+        if (!tokens.markUsed(token.getId(), now)) {
+            throw new ConflictException(ALREADY_ROTATED);
+        }
 
         User user = users.findById(token.getUserId())
                 .filter(User::isActive)
@@ -116,9 +119,25 @@ public class AuthenticationUseCase {
         tokens.findByHash(OpaqueTokens.hash(rawRefreshToken))
                 .filter(t -> t.getTokenType() == UserTokenType.REFRESH && t.getUsedAt() == null)
                 .ifPresent(t -> {
-                    t.setUsedAt(now);
+                    t.revoke(now);
                     tokens.save(t);
                 });
+    }
+
+    /**
+     * Token ya usado. Revocado (logout, cambio de contraseña): 401. Rotado hace menos de
+     * REUSE_GRACE: carrera benigna, 409. Rotado antes: posible robo, se cierran todas las sesiones.
+     */
+    private void rejectReuse(UserToken token, Instant now) {
+        if (token.wasRevoked()) {
+            throw new NotAuthorizedException(INVALID_SESSION);
+        }
+        if (!token.getUsedAt().plus(REUSE_GRACE).isBefore(now)) {
+            throw new ConflictException(ALREADY_ROTATED);
+        }
+        Log.warnf("Reutilización de refresh token del usuario %s: se cierran todas sus sesiones", token.getUserId());
+        tokens.invalidateAll(token.getUserId(), UserTokenType.REFRESH, now);
+        throw new NotAuthorizedException(INVALID_SESSION);
     }
 
     private String dummyHash() {

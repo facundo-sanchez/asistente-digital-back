@@ -10,6 +10,7 @@ import org.acme.user.infrastructure.rest.dto.RegisterRequest;
 import org.acme.user.infrastructure.rest.dto.UpdateProfileRequest;
 import org.acme.user.infrastructure.rest.dto.UserResponse;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,6 +18,7 @@ import java.time.Instant;
 @Mapper(config = MapStructConfig.class)
 public interface UserRestMapper {
 
+    @Mapping(target = "hasPassword", expression = "java(user.hasPassword())")
     UserResponse toResponse(User user);
 
     RegisterCommand toCommand(RegisterRequest request);

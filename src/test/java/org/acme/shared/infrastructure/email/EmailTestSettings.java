@@ -4,6 +4,7 @@ import org.acme.shared.application.AppSettings;
 import org.acme.shared.application.AuthSettings;
 import org.acme.shared.application.EmailDelivery;
 import org.acme.shared.application.EmailSettings;
+import org.acme.shared.application.GoogleSettings;
 
 /** Configuración de prueba con el modo de entrega de emails elegido. */
 public class EmailTestSettings implements AppSettings {
@@ -27,5 +28,10 @@ public class EmailTestSettings implements AppSettings {
     @Override
     public EmailSettings email() {
         return () -> delivery;
+    }
+
+    @Override
+    public GoogleSettings google() {
+        throw new UnsupportedOperationException("No se usa en los tests de email");
     }
 }

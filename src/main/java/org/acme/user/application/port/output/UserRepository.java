@@ -12,6 +12,8 @@ public interface UserRepository {
     /** email ya normalizado ({@link User#normalizeEmail(String)}). */
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByGoogleSubject(String googleSubject);
+
     boolean existsByEmail(String email);
 
     /** Inserta si no tiene id; si no, actualiza. Devuelve el usuario persistido. */

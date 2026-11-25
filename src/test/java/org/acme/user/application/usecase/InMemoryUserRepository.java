@@ -38,6 +38,14 @@ public class InMemoryUserRepository implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByGoogleSubject(String googleSubject) {
+        return rows.values().stream()
+                .filter(u -> googleSubject.equals(u.getGoogleSubject()))
+                .findFirst()
+                .map(u -> u.toBuilder().build());
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return findByEmail(email).isPresent();
     }

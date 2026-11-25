@@ -12,4 +12,6 @@ public interface AppSettings {
     AuthSettings auth();
 
     EmailSettings email();
+
+    GoogleSettings google();
 }

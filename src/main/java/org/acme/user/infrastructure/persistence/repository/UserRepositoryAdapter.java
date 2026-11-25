@@ -31,6 +31,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByGoogleSubject(String googleSubject) {
+        return repository.find("googleSubject", googleSubject).firstResultOptional().map(mapper::toModel);
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return repository.count("email", email) > 0;
     }

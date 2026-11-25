@@ -18,7 +18,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.time.Clock;
 
-/** Autenticación: registro, login, refresh, logout, verificación de email y recupero de contraseña. */
+/** Autenticación: registro, login, login con Google, refresh, logout, verificación de email y recupero de contraseña. */
 @Path("/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -36,6 +36,9 @@ public class AuthResource {
 
     @Inject
     PasswordUseCase passwords;
+
+    @Inject
+    GoogleLoginUseCase googleLogin;
 
     @Inject
     UserRestMapper mapper;
@@ -61,6 +64,25 @@ public class AuthResource {
     @Operation(summary = "Iniciar sesión con email y contraseña")
     public AuthResponse login(@Valid @NotNull LoginRequest request) {
         return mapper.toResponse(authentication.login(request.email(), request.password()), clock.instant());
+    }
+
+    @POST
+    @Path("/google/authorization")
+    @PermitAll
+    @Operation(summary = "URL para iniciar sesión con Google",
+            description = "state y codeChallenge (PKCE) los genera el BFF. 503 si Google no está configurado")
+    public GoogleAuthorizationResponse googleAuthorization(@Valid @NotNull GoogleAuthorizationRequest request) {
+        return new GoogleAuthorizationResponse(
+                googleLogin.authorizationUrl(request.state(), request.codeChallenge()).toString());
+    }
+
+    @POST
+    @Path("/google")
+    @PermitAll
+    @Operation(summary = "Iniciar sesión con Google",
+            description = "Canjea el código de Google. Vincula la cuenta con el mismo email o crea una nueva")
+    public AuthResponse loginWithGoogle(@Valid @NotNull GoogleLoginRequest request) {
+        return mapper.toResponse(googleLogin.login(request.code(), request.codeVerifier()), clock.instant());
     }
 
     @POST

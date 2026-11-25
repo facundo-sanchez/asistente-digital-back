@@ -47,11 +47,21 @@ public class InMemoryUserTokenRepository implements UserTokenRepository {
     }
 
     @Override
+    public boolean markUsed(UUID tokenId, Instant when) {
+        UserToken token = rows.get(tokenId);
+        if (token == null || token.getUsedAt() != null) {
+            return false;
+        }
+        token.setUsedAt(when);
+        return true;
+    }
+
+    @Override
     public int invalidateAll(UUID userId, UserTokenType type, Instant when) {
         int count = 0;
         for (UserToken t : rows.values()) {
             if (t.getUserId().equals(userId) && t.getTokenType() == type && t.getUsedAt() == null) {
-                t.setUsedAt(when);
+                t.revoke(when);
                 count++;
             }
         }

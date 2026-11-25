@@ -32,6 +32,8 @@ public class AuthFixture {
     final PasswordUseCase passwords =
             new PasswordUseCase(users, tokens, hasher, emails, authEmails, sessionIssuer, settings, clock);
     final ProfileUseCase profile = new ProfileUseCase(users);
+    final FakeGoogleIdentityProvider google = new FakeGoogleIdentityProvider();
+    final GoogleLoginUseCase googleLogin = new GoogleLoginUseCase(google, users, tokens, sessionIssuer, settings, clock);
 
     /** Registra el usuario de prueba con email y nombre "sucios" para probar la normalización. */
     AuthSession registerDefault() {

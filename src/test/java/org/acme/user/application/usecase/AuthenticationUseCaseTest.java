@@ -1,5 +1,6 @@
 package org.acme.user.application.usecase;
 
+import org.acme.domain.exceptions.ConflictException;
 import org.acme.domain.exceptions.NotAuthorizedException;
 import org.acme.user.application.model.AuthSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,8 +69,25 @@ class AuthenticationUseCaseTest {
         AuthSession second = f.authentication.refresh(first.refreshToken());
 
         assertNotEquals(first.refreshToken(), second.refreshToken());
-        assertThrows(NotAuthorizedException.class, () -> f.authentication.refresh(first.refreshToken()));
         assertEquals(1, f.tokens.activeRefreshTokens(first.user().getId()), "la sesión nueva sigue viva");
+    }
+
+    @Test
+    void reusoDentroDeLaVentanaEsConflictoYNoCierraLaSesion() {
+        AuthSession first = f.registerDefault();
+        AuthSession second = f.authentication.refresh(first.refreshToken());
+
+        // Otra pestaña llegó tarde con el mismo token
+        assertThrows(ConflictException.class, () -> f.authentication.refresh(first.refreshToken()));
+        assertDoesNotThrow(() -> f.authentication.refresh(second.refreshToken()));
+    }
+
+    @Test
+    void tokenRevocadoPorLogoutDa401AunqueSeaEnseguida() {
+        AuthSession s = f.registerDefault();
+        f.authentication.logout(s.refreshToken());
+
+        assertThrows(NotAuthorizedException.class, () -> f.authentication.refresh(s.refreshToken()));
     }
 
     @Test

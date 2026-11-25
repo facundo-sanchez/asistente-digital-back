@@ -14,6 +14,12 @@ public interface UserTokenRepository {
     /** Busca por el hash SHA-256 del token (el valor en claro nunca se guarda). */
     Optional<UserToken> findByHash(String tokenHash);
 
-    /** Marca como usados todos los tokens vigentes de ese tipo. Devuelve cuántos invalidó. */
+    /**
+     * Marca el token como usado solo si nadie lo usó antes (update condicional, atómico en la base).
+     * Devuelve false si otro pedido lo usó primero.
+     */
+    boolean markUsed(UUID tokenId, Instant when);
+
+    /** Revoca todos los tokens vigentes de ese tipo ({@link UserToken#revoke}). Devuelve cuántos revocó. */
     int invalidateAll(UUID userId, UserTokenType type, Instant when);
 }
