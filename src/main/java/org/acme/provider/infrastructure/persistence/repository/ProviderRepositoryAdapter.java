@@ -16,6 +16,7 @@ import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,24 @@ public class ProviderRepositoryAdapter implements ProviderRepository {
         return repository.find("id = :id and " + VISIBLE, Parameters.with("id", providerId).and("userId", userId))
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public boolean existsVisibleWithName(UUID userId, String name) {
+        return repository.count(VISIBLE + " and lower(name) = :name",
+                Parameters.with("userId", userId).and("name", name.toLowerCase(Locale.ROOT))) > 0;
+    }
+
+    @Override
+    public boolean existsOwnCode(UUID userId, String code) {
+        return repository.count("userId = ?1 and code = ?2", userId, code) > 0;
+    }
+
+    @Override
+    public Provider save(Provider provider) {
+        ProviderEntity entity = mapper.toEntity(provider);
+        repository.persistAndFlush(entity);
+        return mapper.toModel(entity);
     }
 
     @Override

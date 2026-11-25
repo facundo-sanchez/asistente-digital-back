@@ -54,6 +54,21 @@ public class InMemoryProviderRepository implements ProviderRepository {
     }
 
     @Override
+    public boolean existsVisibleWithName(UUID userId, String name) {
+        return rows.stream().anyMatch(p -> isVisible(p, userId) && p.getName().equalsIgnoreCase(name));
+    }
+
+    @Override
+    public boolean existsOwnCode(UUID userId, String code) {
+        return rows.stream().anyMatch(p -> userId.equals(p.getUserId()) && code.equals(p.getCode()));
+    }
+
+    @Override
+    public Provider save(Provider provider) {
+        return add(provider);
+    }
+
+    @Override
     public Map<UUID, String> findNames(Collection<UUID> providerIds) {
         return rows.stream()
                 .filter(p -> providerIds.contains(p.getId()))

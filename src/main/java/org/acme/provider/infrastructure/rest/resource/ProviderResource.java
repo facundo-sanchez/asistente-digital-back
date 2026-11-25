@@ -2,17 +2,24 @@ package org.acme.provider.infrastructure.rest.resource;
 
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.acme.provider.application.usecase.CreateProviderUseCase;
 import org.acme.provider.application.usecase.ProviderQueryUseCase;
+import org.acme.provider.infrastructure.rest.dto.ProviderRequest;
 import org.acme.provider.infrastructure.rest.dto.ProviderResponse;
 import org.acme.provider.infrastructure.rest.mapper.ProviderRestMapper;
 import org.acme.shared.application.model.PageQuery;
@@ -27,7 +34,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.util.UUID;
 
-/** Catálogo de proveedores visible para el usuario: los globales más los propios. */
+/** Catálogo de proveedores visible para el usuario (globales más propios) y alta de proveedores propios. */
 @Path("/providers")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
@@ -37,6 +44,9 @@ public class ProviderResource {
 
     @Inject
     ProviderQueryUseCase providers;
+
+    @Inject
+    CreateProviderUseCase createProvider;
 
     @Inject
     ProviderRestMapper mapper;
@@ -66,5 +76,14 @@ public class ProviderResource {
     @Operation(summary = "Consultar un proveedor", description = "404 si no existe o es propio de otro usuario")
     public ProviderResponse get(@PathParam("id") UUID id) {
         return mapper.toResponse(providers.get(currentUser.id(), id));
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Crear un proveedor propio",
+            description = "Para cuando no está en el catálogo. Solo lo ve su dueño. 409 si ya existe uno con ese nombre")
+    public Response create(@Valid @NotNull ProviderRequest request) {
+        ProviderResponse body = mapper.toResponse(createProvider.create(currentUser.id(), mapper.toModel(request)));
+        return Response.status(Response.Status.CREATED).entity(body).build();
     }
 }

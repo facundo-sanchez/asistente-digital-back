@@ -21,6 +21,15 @@ public interface ProviderRepository {
 
     Optional<Provider> findVisibleById(UUID userId, UUID providerId);
 
+    /** true si el usuario ya ve un proveedor (catálogo o propio) con ese nombre, sin distinguir mayúsculas. */
+    boolean existsVisibleWithName(UUID userId, String name);
+
+    /** true si el usuario ya tiene un proveedor propio con ese code. */
+    boolean existsOwnCode(UUID userId, String code);
+
+    /** Inserta un proveedor propio. Devuelve el proveedor persistido. */
+    Provider save(Provider provider);
+
     /** Nombre de cada proveedor pedido, por id (para mostrar junto a los servicios). */
     Map<UUID, String> findNames(Collection<UUID> providerIds);
 }
