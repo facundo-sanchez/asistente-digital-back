@@ -1,5 +1,6 @@
 package org.acme.service.infrastructure.rest.mapper;
 
+import org.acme.service.application.model.ServiceView;
 import org.acme.service.domain.model.Service;
 import org.acme.service.infrastructure.rest.dto.ServiceRequest;
 import org.acme.service.infrastructure.rest.dto.ServiceResponse;
@@ -12,7 +13,12 @@ import org.mapstruct.MappingTarget;
 @Mapper(config = MapStructConfig.class)
 public interface ServiceRestMapper {
 
-    ServiceResponse toResponse(Service service);
+    /** providerName llega aparte: el servicio solo guarda el id del proveedor. */
+    ServiceResponse toResponse(Service service, String providerName);
+
+    default ServiceResponse toResponse(ServiceView view) {
+        return toResponse(view.service(), view.providerName());
+    }
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)

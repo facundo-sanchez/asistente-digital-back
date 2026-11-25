@@ -62,11 +62,6 @@ class ProviderQueryUseCaseTest {
     }
 
     @Test
-    void normalizaLosEspaciosDelTexto() {
-        assertEquals("agua x", ProviderQueryUseCase.normalize("  agua   x "));
-    }
-
-    @Test
     void paginaLosResultados() {
         PageResult<Provider> second = useCase.list(ANA, null, null, new PageQuery(1, 3));
 

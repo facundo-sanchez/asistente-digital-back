@@ -6,6 +6,7 @@ import org.acme.domain.exceptions.NotFoundException;
 import org.acme.provider.application.model.ProviderFilter;
 import org.acme.provider.application.port.output.ProviderRepository;
 import org.acme.provider.domain.model.Provider;
+import org.acme.shared.application.SearchText;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.domain.model.ServiceCategory;
@@ -24,20 +25,11 @@ public class ProviderQueryUseCase {
     }
 
     public PageResult<Provider> list(UUID userId, String text, ServiceCategory category, PageQuery page) {
-        return providers.findVisible(userId, new ProviderFilter(normalize(text), category), page);
+        return providers.findVisible(userId, new ProviderFilter(SearchText.normalize(text), category), page);
     }
 
     /** Un proveedor propio de otro usuario responde igual que uno inexistente: no se revela que existe. */
     public Provider get(UUID userId, UUID providerId) {
         return providers.findVisibleById(userId, providerId).orElseThrow(() -> new NotFoundException("proveedor"));
-    }
-
-    /** Sin espacios de más; vacío equivale a no filtrar. */
-    static String normalize(String text) {
-        if (text == null) {
-            return null;
-        }
-        String trimmed = text.trim().replaceAll("\\s+", " ");
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

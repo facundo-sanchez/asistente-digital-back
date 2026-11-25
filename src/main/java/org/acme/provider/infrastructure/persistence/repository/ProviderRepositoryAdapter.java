@@ -13,10 +13,13 @@ import org.acme.provider.infrastructure.persistence.entity.ProviderEntity;
 import org.acme.provider.infrastructure.persistence.mapper.ProviderPersistenceMapper;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
+import org.acme.shared.infrastructure.persistence.LikePattern;
 
-import java.util.Locale;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Adaptador de persistencia del puerto {@link ProviderRepository}. */
 @ApplicationScoped
@@ -36,8 +39,8 @@ public class ProviderRepositoryAdapter implements ProviderRepository {
         StringBuilder where = new StringBuilder(VISIBLE + " and active = true");
         Parameters params = Parameters.with("userId", userId);
         if (filter.text() != null) {
-            where.append(" and lower(name) like :text escape '\\'");
-            params.and("text", "%" + escapeLike(filter.text().toLowerCase(Locale.ROOT)) + "%");
+            where.append(" and lower(name) like :text").append(LikePattern.ESCAPE);
+            params.and("text", LikePattern.contains(filter.text()));
         }
         if (filter.category() != null) {
             where.append(" and category = :category");
@@ -56,8 +59,13 @@ public class ProviderRepositoryAdapter implements ProviderRepository {
                 .map(mapper::toModel);
     }
 
-    /** El texto del usuario se busca literal: % y _ no actúan como comodines. */
-    static String escapeLike(String text) {
-        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    @Override
+    public Map<UUID, String> findNames(Collection<UUID> providerIds) {
+        if (providerIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.list("id in ?1", providerIds).stream()
+                .collect(Collectors.toMap(ProviderEntity::getId, ProviderEntity::getName));
     }
+
 }

@@ -12,12 +12,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import org.acme.domain.exceptions.ServiceException;
 import org.acme.provider.application.usecase.ProviderQueryUseCase;
 import org.acme.provider.infrastructure.rest.dto.ProviderResponse;
 import org.acme.provider.infrastructure.rest.mapper.ProviderRestMapper;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.domain.model.ServiceCategory;
+import org.acme.shared.infrastructure.rest.EnumParams;
 import org.acme.shared.infrastructure.rest.dto.PageResponse;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -56,24 +56,10 @@ public class ProviderResource {
             @Min(value = 1, message = "El tamaño mínimo es 1")
             @Max(value = PageQuery.MAX_SIZE, message = "El tamaño máximo es 100") int size) {
         return PageResponse.from(
-                providers.list(currentUser.id(), query, parseCategory(category), new PageQuery(page, size)),
+                providers.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría"), new PageQuery(page, size)),
                 mapper::toResponse);
     }
 
-    /**
-     * La categoría llega como texto para responder 400 con un mensaje claro: si JAX-RS no
-     * puede convertir un enum de un query param, responde 404.
-     */
-    private static ServiceCategory parseCategory(String category) {
-        if (category == null || category.isBlank()) {
-            return null;
-        }
-        try {
-            return ServiceCategory.valueOf(category.trim());
-        } catch (IllegalArgumentException e) {
-            throw new ServiceException("Categoría inválida: " + category);
-        }
-    }
 
     @GET
     @Path("/{id}")

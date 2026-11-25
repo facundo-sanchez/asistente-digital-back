@@ -7,12 +7,15 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Repositorio en memoria con la misma regla de visibilidad que el adaptador real. */
 public class InMemoryProviderRepository implements ProviderRepository {
@@ -48,6 +51,13 @@ public class InMemoryProviderRepository implements ProviderRepository {
     @Override
     public Optional<Provider> findVisibleById(UUID userId, UUID providerId) {
         return rows.stream().filter(p -> p.getId().equals(providerId) && isVisible(p, userId)).findFirst();
+    }
+
+    @Override
+    public Map<UUID, String> findNames(Collection<UUID> providerIds) {
+        return rows.stream()
+                .filter(p -> providerIds.contains(p.getId()))
+                .collect(Collectors.toMap(Provider::getId, Provider::getName));
     }
 
     private static boolean isVisible(Provider provider, UUID userId) {

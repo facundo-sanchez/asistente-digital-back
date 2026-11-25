@@ -31,6 +31,10 @@ public record ServiceRequest(
 
         LocalDate startDate,
         LocalDate endDate,
+
+        @Size(max = 2000, message = "Las notas admiten hasta 2000 caracteres")
         String notes,
+
+        @Schema(description = "Datos adicionales libres (opcional)")
         Map<String, Object> metadata
 ) {}
