@@ -8,11 +8,13 @@ import org.acme.service.application.model.ServiceFilter;
 import org.acme.service.application.model.ServiceView;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.service.domain.model.Service;
+import org.acme.service.domain.model.CustomerReference;
 import org.acme.shared.application.SearchText;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.domain.model.ServiceCategory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -43,5 +45,26 @@ public class ServiceQueryUseCase {
     public ServiceView get(UUID userId, UUID serviceId) {
         Service service = services.findByIdForUser(userId, serviceId).orElseThrow(() -> new NotFoundException("servicio"));
         return new ServiceView(service, providers.findNames(Set.of(service.getProviderId())).get(service.getProviderId()));
+    }
+
+    /**
+     * Servicios del usuario con el mismo proveedor y el mismo nro. de socio (comparado sin
+     * espacios, guiones ni mayúsculas). excludeId: el servicio que se está editando.
+     * Sin nro. de socio no hay con qué comparar: lista vacía.
+     */
+    public List<ServiceView> possibleDuplicates(UUID userId, UUID providerId, String customerReference, UUID excludeId) {
+        String reference = CustomerReference.normalize(customerReference);
+        if (reference == null) {
+            return List.of();
+        }
+        List<Service> matches = services.findByProvider(userId, providerId).stream()
+                .filter(s -> !s.getId().equals(excludeId))
+                .filter(s -> reference.equals(CustomerReference.normalize(s.getCustomerReference())))
+                .toList();
+        if (matches.isEmpty()) {
+            return List.of();
+        }
+        String providerName = providers.findNames(Set.of(providerId)).get(providerId);
+        return matches.stream().map(s -> new ServiceView(s, providerName)).toList();
     }
 }

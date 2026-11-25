@@ -15,6 +15,7 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,6 +46,11 @@ public class ServiceRepositoryAdapter implements ServiceRepository {
         return repository.find("id = :id and userId = :userId", Parameters.with("id", serviceId).and("userId", userId))
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public List<Service> findByProvider(UUID userId, UUID providerId) {
+        return repository.list("userId = ?1 and providerId = ?2", userId, providerId).stream().map(mapper::toModel).toList();
     }
 
     @Override

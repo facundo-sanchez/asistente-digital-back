@@ -41,6 +41,14 @@ public class InMemoryServiceRepository implements ServiceRepository {
     }
 
     @Override
+    public List<Service> findByProvider(UUID userId, UUID providerId) {
+        return rows.values().stream()
+                .filter(s -> s.getUserId().equals(userId) && s.getProviderId().equals(providerId))
+                .map(s -> s.toBuilder().build())
+                .toList();
+    }
+
+    @Override
     public PageResult<Service> findForUser(UUID userId, ServiceFilter filter, PageQuery page) {
         List<Service> matches = rows.values().stream()
                 .filter(s -> s.getUserId().equals(userId))

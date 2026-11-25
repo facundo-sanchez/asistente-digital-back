@@ -37,6 +37,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Servicios del usuario autenticado (CU-001). El dueño sale siempre del token. */
@@ -85,6 +86,19 @@ public class ServiceResource {
                 serviceQuery.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría"),
                         active, new PageQuery(page, size)),
                 mapper::toResponse);
+    }
+
+    @GET
+    @Path("/duplicates")
+    @Operation(summary = "Posibles duplicados",
+            description = "Servicios propios con el mismo proveedor y nro. de socio (sin espacios, guiones ni mayúsculas). Para avisar antes de guardar")
+    public List<ServiceResponse> duplicates(
+            @QueryParam("providerId") @NotNull(message = "El proveedor es obligatorio") UUID providerId,
+            @QueryParam("customerReference") @Size(max = 150) String customerReference,
+            @QueryParam("excludeId") @Parameter(description = "El servicio que se está editando") UUID excludeId) {
+        return serviceQuery.possibleDuplicates(currentUser.id(), providerId, customerReference, excludeId).stream()
+                .map(mapper::toResponse)
+                .toList();
     }
 
     @GET
