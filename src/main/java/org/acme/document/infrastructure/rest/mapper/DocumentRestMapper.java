@@ -1,6 +1,7 @@
 package org.acme.document.infrastructure.rest.mapper;
 
 import org.acme.document.domain.model.AiExtractionResult;
+import org.acme.document.application.model.DocumentView;
 import org.acme.document.domain.model.Document;
 import org.acme.document.domain.model.DocumentProcessingJob;
 import org.acme.document.infrastructure.rest.dto.DocumentResponse;
@@ -15,7 +16,12 @@ import org.mapstruct.MappingTarget;
 @Mapper(config = MapStructConfig.class)
 public interface DocumentRestMapper {
 
-    DocumentResponse toResponse(Document document);
+    /** serviceName llega aparte: el documento solo guarda el id del servicio. */
+    DocumentResponse toResponse(Document document, String serviceName);
+
+    default DocumentResponse toResponse(DocumentView view) {
+        return toResponse(view.document(), view.serviceName());
+    }
 
     ProcessingJobResponse toResponse(DocumentProcessingJob job);
 

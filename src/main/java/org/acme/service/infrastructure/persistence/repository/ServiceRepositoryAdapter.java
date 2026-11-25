@@ -15,9 +15,12 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Adaptador de persistencia del puerto {@link ServiceRepository}. Siempre filtra por userId. */
 @ApplicationScoped
@@ -51,6 +54,15 @@ public class ServiceRepositoryAdapter implements ServiceRepository {
     @Override
     public List<Service> findByProvider(UUID userId, UUID providerId) {
         return repository.list("userId = ?1 and providerId = ?2", userId, providerId).stream().map(mapper::toModel).toList();
+    }
+
+    @Override
+    public Map<UUID, String> findNames(UUID userId, Collection<UUID> serviceIds) {
+        if (serviceIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.list("userId = ?1 and id in ?2", userId, serviceIds).stream()
+                .collect(Collectors.toMap(ServiceEntity::getId, ServiceEntity::getName));
     }
 
     @Override

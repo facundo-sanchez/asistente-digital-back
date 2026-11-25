@@ -2,24 +2,38 @@ package org.acme.document.infrastructure.rest.resource;
 
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.acme.document.application.model.UploadDocumentCommand;
+import org.acme.document.application.usecase.DocumentQueryUseCase;
 import org.acme.document.application.usecase.UploadDocumentUseCase;
+import org.acme.document.infrastructure.rest.dto.DocumentResponse;
 import org.acme.document.infrastructure.rest.mapper.DocumentRestMapper;
 import org.acme.domain.exceptions.ServiceException;
+import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.domain.model.DocumentType;
 import org.acme.shared.infrastructure.rest.EnumParams;
+import org.acme.shared.infrastructure.rest.dto.PageResponse;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
+
+import java.util.UUID;
 
 /** Repositorio documental del usuario (CU-009). El dueño sale siempre del token. */
 @Path("/documents")
@@ -33,10 +47,34 @@ public class DocumentResource {
     UploadDocumentUseCase uploadDocument;
 
     @Inject
+    DocumentQueryUseCase documentQuery;
+
+    @Inject
     DocumentRestMapper mapper;
 
     @Inject
     CurrentUser currentUser;
+
+    @GET
+    @Operation(summary = "Listar documentos", description = "Más nuevos primero. query busca en el título y en el nombre del archivo")
+    public PageResponse<DocumentResponse> list(
+            @QueryParam("query") @Size(max = 100, message = "La búsqueda admite hasta 100 caracteres") String query,
+            @QueryParam("documentType") @Parameter(example = "INVOICE") String documentType,
+            @QueryParam("serviceId") UUID serviceId,
+            @QueryParam("page") @DefaultValue("0") @Min(value = 0, message = "La página empieza en 0") int page,
+            @QueryParam("size") @DefaultValue("20")
+            @Min(value = 1, message = "El tamaño mínimo es 1")
+            @Max(value = PageQuery.MAX_SIZE, message = "El tamaño máximo es 100") int size) {
+        DocumentType type = EnumParams.parse(DocumentType.class, documentType, "Tipo de documento inválido");
+        return PageResponse.from(documentQuery.list(currentUser.id(), query, type, serviceId, new PageQuery(page, size)), mapper::toResponse);
+    }
+
+    @GET
+    @Path("/{id}")
+    @Operation(summary = "Consultar un documento", description = "404 si no existe, está borrado o es de otro usuario")
+    public DocumentResponse get(@PathParam("id") UUID id) {
+        return mapper.toResponse(documentQuery.get(currentUser.id(), id));
+    }
 
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -55,7 +93,7 @@ public class DocumentResource {
         DocumentType type = EnumParams.parse(DocumentType.class, documentType, "Tipo de documento inválido");
         var command = new UploadDocumentCommand(file.uploadedFile(), file.fileName(), type == null ? DocumentType.OTHER : type, title);
         return Response.status(Response.Status.CREATED)
-                .entity(mapper.toResponse(uploadDocument.upload(currentUser.id(), command)))
+                .entity(mapper.toResponse(uploadDocument.upload(currentUser.id(), command), null))
                 .build();
     }
 }

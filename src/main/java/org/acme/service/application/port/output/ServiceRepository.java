@@ -5,7 +5,9 @@ import org.acme.service.domain.model.Service;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +21,9 @@ public interface ServiceRepository {
 
     /** Todos los servicios del usuario con ese proveedor (para detectar duplicados). */
     List<Service> findByProvider(UUID userId, UUID providerId);
+
+    /** Nombre de cada servicio pedido del usuario, por id (para mostrar junto a otros datos). */
+    Map<UUID, String> findNames(UUID userId, Collection<UUID> serviceIds);
 
     /** Ordenados por nombre. */
     PageResult<Service> findForUser(UUID userId, ServiceFilter filter, PageQuery page);

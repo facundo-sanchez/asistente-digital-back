@@ -6,6 +6,7 @@ import org.acme.service.domain.model.Service;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Repositorio en memoria con los mismos filtros que el adaptador real. Guarda copias. */
 public class InMemoryServiceRepository implements ServiceRepository {
@@ -21,6 +23,14 @@ public class InMemoryServiceRepository implements ServiceRepository {
 
     public Service stored(UUID id) {
         return rows.get(id);
+    }
+
+    @Override
+    public Map<UUID, String> findNames(UUID userId, Collection<UUID> serviceIds) {
+        // Inmutable como el del adaptador real (Map.of / toMap + copyOf): get(null) falla igual
+        return Map.copyOf(rows.values().stream()
+                .filter(s -> s.getUserId().equals(userId) && serviceIds.contains(s.getId()))
+                .collect(Collectors.toMap(Service::getId, Service::getName)));
     }
 
     @Override
