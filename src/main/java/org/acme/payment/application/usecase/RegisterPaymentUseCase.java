@@ -3,7 +3,6 @@ package org.acme.payment.application.usecase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.acme.document.application.port.output.DocumentRepository;
 import org.acme.domain.exceptions.NotFoundException;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.obligation.application.port.output.ObligationRepository;
@@ -14,7 +13,6 @@ import org.acme.payment.application.port.output.PaymentRepository;
 import org.acme.payment.domain.model.Payment;
 
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
 
 /** Registrar el pago total o parcial de una obligación (CU-006). Actualiza su estado en la misma transacción. */
@@ -23,21 +21,16 @@ public class RegisterPaymentUseCase {
 
     static final String CANCELLED = "La obligación está cancelada";
     static final String ALREADY_PAID = "La obligación ya está pagada";
-    static final String WRONG_CURRENCY = "El pago tiene que ser en %s, la moneda de la obligación";
-    static final String INVALID_CURRENCY = "La moneda tiene que ser ARS o USD";
-    static final String UNKNOWN_RECEIPT = "El comprobante elegido no existe";
-
-    private static final Set<String> CURRENCIES = Set.of("ARS", "USD");
 
     private final PaymentRepository payments;
     private final ObligationRepository obligations;
-    private final DocumentRepository documents;
+    private final PaymentDraftValidator validator;
 
     @Inject
-    public RegisterPaymentUseCase(PaymentRepository payments, ObligationRepository obligations, DocumentRepository documents) {
+    public RegisterPaymentUseCase(PaymentRepository payments, ObligationRepository obligations, PaymentDraftValidator validator) {
         this.payments = payments;
         this.obligations = obligations;
-        this.documents = documents;
+        this.validator = validator;
     }
 
     // shortcut: dos pagos simultáneos de la misma obligación podrían calcular el estado con el saldo previo;
@@ -53,22 +46,9 @@ public class RegisterPaymentUseCase {
         if (obligation.getStatus() == ObligationStatus.PAID) {
             throw new ServiceException(ALREADY_PAID);
         }
-        if (obligation.getCurrency() != null && !obligation.getCurrency().equals(draft.getCurrency())) {
-            throw new ServiceException(WRONG_CURRENCY.formatted(obligation.getCurrency()));
-        }
-        if (!CURRENCIES.contains(draft.getCurrency())) {
-            throw new ServiceException(INVALID_CURRENCY);
-        }
-        // Un documento de otro usuario o borrado responde igual que uno inexistente
-        if (draft.getReceiptDocumentId() != null && documents.findByIdForUser(userId, draft.getReceiptDocumentId()).isEmpty()) {
-            throw new ServiceException(UNKNOWN_RECEIPT);
-        }
+        validator.validate(userId, obligation, draft);
 
-        Payment payment = payments.save(draft.toBuilder()
-                .id(null)
-                .userId(userId)
-                .notes(draft.getNotes() == null || draft.getNotes().isBlank() ? null : draft.getNotes().trim())
-                .build());
+        Payment payment = payments.save(PaymentDraftValidator.clean(userId, obligation.getId(), draft));
         obligation.applyPaidAmount(summary.paidAmount().add(payment.getAmount()), Instant.now());
         obligations.save(obligation);
         return payment;

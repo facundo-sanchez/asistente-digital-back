@@ -35,7 +35,7 @@ class RegisterPaymentUseCaseTest {
         obligations = new InMemoryObligationRepository();
         payments = new InMemoryPaymentRepository(obligations);
         documents = new InMemoryDocumentRepository();
-        useCase = new RegisterPaymentUseCase(payments, obligations, documents);
+        useCase = new RegisterPaymentUseCase(payments, obligations, new PaymentDraftValidator(documents));
         light = obligation(ANA, "40000", "ARS");
     }
 
