@@ -13,6 +13,7 @@ import org.acme.document.domain.model.DocumentSource;
 import org.acme.document.domain.model.ProcessingStatus;
 import org.acme.domain.exceptions.ConflictException;
 import org.acme.domain.exceptions.ServiceException;
+import org.acme.service.application.port.output.ServiceRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,12 +35,14 @@ public class UploadDocumentUseCase {
     private final DocumentRepository documents;
     private final FileStorage storage;
     private final DocumentSettings settings;
+    private final ServiceRepository services;
 
     @Inject
-    public UploadDocumentUseCase(DocumentRepository documents, FileStorage storage, DocumentSettings settings) {
+    public UploadDocumentUseCase(DocumentRepository documents, FileStorage storage, DocumentSettings settings, ServiceRepository services) {
         this.documents = documents;
         this.storage = storage;
         this.settings = settings;
+        this.services = services;
     }
 
     @Transactional
@@ -51,6 +54,10 @@ public class UploadDocumentUseCase {
             }
             if (size > settings.maxSize()) {
                 throw new ServiceException("El archivo supera el máximo de " + settings.maxSize() / (1024 * 1024) + " MB");
+            }
+            // Un servicio de otro usuario responde igual que uno inexistente
+            if (command.serviceId() != null && services.findByIdForUser(userId, command.serviceId()).isEmpty()) {
+                throw new ServiceException(ManageDocumentUseCase.UNKNOWN_SERVICE);
             }
             String mimeType = FileType.detect(command.file()).orElseThrow(() -> new ServiceException(INVALID_TYPE));
 
@@ -64,6 +71,7 @@ public class UploadDocumentUseCase {
             try {
                 return documents.save(Document.builder()
                         .userId(userId)
+                        .serviceId(command.serviceId())
                         .documentType(command.documentType())
                         .title(blankToNull(command.title()))
                         .originalFilename(cleanFilename(command.originalFilename()))

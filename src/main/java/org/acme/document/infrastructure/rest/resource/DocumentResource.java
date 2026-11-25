@@ -120,11 +120,12 @@ public class DocumentResource {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Operation(summary = "Subir un documento",
-            description = "PDF, JPG, PNG o WEBP de hasta 10 MB. 409 si el mismo archivo ya está subido")
+            description = "PDF, JPG, PNG o WEBP de hasta 10 MB. serviceId opcional (del usuario). 409 si el mismo archivo ya está subido")
     public Response upload(
             @RestForm("file") FileUpload file,
             @RestForm("documentType") String documentType,
-            @RestForm("title") String title) {
+            @RestForm("title") String title,
+            @RestForm("serviceId") UUID serviceId) {
         if (file == null) {
             throw new ServiceException("Elegí un archivo");
         }
@@ -132,9 +133,11 @@ public class DocumentResource {
             throw new ServiceException("El título admite hasta 200 caracteres");
         }
         DocumentType type = EnumParams.parse(DocumentType.class, documentType, "Tipo de documento inválido");
-        var command = new UploadDocumentCommand(file.uploadedFile(), file.fileName(), type == null ? DocumentType.OTHER : type, title);
+        var command = new UploadDocumentCommand(file.uploadedFile(), file.fileName(), type == null ? DocumentType.OTHER : type, title, serviceId);
+        UUID id = uploadDocument.upload(currentUser.id(), command).getId();
+        // Se relee para responder con el nombre del servicio asociado
         return Response.status(Response.Status.CREATED)
-                .entity(mapper.toResponse(uploadDocument.upload(currentUser.id(), command), null))
+                .entity(mapper.toResponse(documentQuery.get(currentUser.id(), id)))
                 .build();
     }
 }

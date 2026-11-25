@@ -6,6 +6,8 @@ import org.acme.document.domain.model.ProcessingStatus;
 import org.acme.domain.exceptions.ConflictException;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.shared.domain.model.DocumentType;
+import org.acme.service.application.usecase.InMemoryServiceRepository;
+import org.acme.service.domain.model.Service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,12 +32,17 @@ class UploadDocumentUseCaseTest {
     private InMemoryDocumentRepository documents;
     private InMemoryFileStorage storage;
     private UploadDocumentUseCase useCase;
+    private UUID anaLight;
+    private UUID betoGas;
 
     @BeforeEach
     void setUp() {
         documents = new InMemoryDocumentRepository();
         storage = new InMemoryFileStorage();
-        useCase = new UploadDocumentUseCase(documents, storage, new TestDocumentSettings());
+        InMemoryServiceRepository services = new InMemoryServiceRepository();
+        anaLight = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build()).getId();
+        betoGas = services.save(Service.builder().userId(BETO).providerId(UUID.randomUUID()).name("Gas Beto").build()).getId();
+        useCase = new UploadDocumentUseCase(documents, storage, new TestDocumentSettings(), services);
     }
 
     @Test
@@ -50,6 +57,16 @@ class UploadDocumentUseCaseTest {
         assertEquals(64, saved.getChecksum().length());
         assertTrue(saved.getStorageKey().startsWith(ANA + "/"));
         assertTrue(storage.files.containsKey(saved.getStorageKey()));
+    }
+
+    @Test
+    void quedaAsociadoAlServicioDelUsuarioYRechazaUnoAjeno() throws IOException {
+        Document saved = useCase.upload(ANA, new UploadDocumentCommand(pdf("luz"), "luz.pdf", DocumentType.INVOICE, null, anaLight));
+        assertEquals(anaLight, saved.getServiceId());
+
+        var foreign = new UploadDocumentCommand(pdf("gas"), "gas.pdf", DocumentType.INVOICE, null, betoGas);
+        assertThrows(ServiceException.class, () -> useCase.upload(ANA, foreign));
+        assertEquals(1, storage.files.size(), "no guarda el archivo si el servicio no es válido");
     }
 
     @Test
@@ -106,6 +123,6 @@ class UploadDocumentUseCaseTest {
     }
 
     private static UploadDocumentCommand command(Path file, String filename, String title) {
-        return new UploadDocumentCommand(file, filename, DocumentType.INVOICE, title);
+        return new UploadDocumentCommand(file, filename, DocumentType.INVOICE, title, null);
     }
 }
