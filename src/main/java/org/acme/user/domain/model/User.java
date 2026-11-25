@@ -41,4 +41,16 @@ public class User {
             emailVerifiedAt = now;
         }
     }
+
+    public boolean hasPassword() {
+        return passwordHash != null;
+    }
+
+    /**
+     * Forma canónica del email: sin espacios y en minúsculas. Se aplica al registrar
+     * y al buscar, así la comparación no depende de cómo el driver compare con citext.
+     */
+    public static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
 }

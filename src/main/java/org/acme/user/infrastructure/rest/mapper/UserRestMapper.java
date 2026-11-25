@@ -1,27 +1,42 @@
 package org.acme.user.infrastructure.rest.mapper;
 
 import org.acme.shared.infrastructure.mapper.MapStructConfig;
+import org.acme.user.application.model.AuthSession;
+import org.acme.user.application.model.RegisterCommand;
+import org.acme.user.application.model.UpdateProfileCommand;
 import org.acme.user.domain.model.User;
+import org.acme.user.infrastructure.rest.dto.AuthResponse;
+import org.acme.user.infrastructure.rest.dto.RegisterRequest;
 import org.acme.user.infrastructure.rest.dto.UpdateProfileRequest;
 import org.acme.user.infrastructure.rest.dto.UserResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+
+import java.time.Duration;
+import java.time.Instant;
 
 @Mapper(config = MapStructConfig.class)
 public interface UserRestMapper {
 
+    @Mapping(target = "hasPassword", expression = "java(user.hasPassword())")
     UserResponse toResponse(User user);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "email", ignore = true)
-    @Mapping(target = "passwordHash", ignore = true)
-    @Mapping(target = "googleSubject", ignore = true)
-    @Mapping(target = "emailVerifiedAt", ignore = true)
-    @Mapping(target = "role", ignore = true)
-    @Mapping(target = "active", ignore = true)
-    @Mapping(target = "lastLoginAt", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    void updateProfile(UpdateProfileRequest request, @MappingTarget User user);
+    RegisterCommand toCommand(RegisterRequest request);
+
+    UpdateProfileCommand toCommand(UpdateProfileRequest request);
+
+    default AuthResponse toResponse(AuthSession session, Instant now) {
+        return new AuthResponse(
+                session.accessToken(),
+                "Bearer",
+                secondsUntil(session.accessTokenExpiresAt(), now),
+                session.refreshToken(),
+                secondsUntil(session.refreshTokenExpiresAt(), now),
+                toResponse(session.user())
+        );
+    }
+
+    private static long secondsUntil(Instant expiresAt, Instant now) {
+        return Math.max(0, Duration.between(now, expiresAt).toSeconds());
+    }
 }
