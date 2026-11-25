@@ -1,5 +1,6 @@
 package org.acme.document.application.usecase;
 
+import org.acme.document.application.model.DocumentFile;
 import org.acme.document.application.model.DocumentView;
 import org.acme.document.domain.model.Document;
 import org.acme.domain.exceptions.NotFoundException;
@@ -34,7 +35,9 @@ class DocumentQueryUseCaseTest {
         documents = new InMemoryDocumentRepository();
         InMemoryServiceRepository services = new InMemoryServiceRepository();
         light = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build()).getId();
-        useCase = new DocumentQueryUseCase(documents, services);
+        InMemoryFileStorage storage = new InMemoryFileStorage();
+        storage.files.put("k", "%PDF-1.4".getBytes());
+        useCase = new DocumentQueryUseCase(documents, services, storage);
 
         invoice = add(ANA, "Factura luz octubre", "luz-10.pdf", DocumentType.INVOICE, light, 1);
         add(ANA, null, "poliza-auto.pdf", DocumentType.POLICY, null, 2);
@@ -63,6 +66,18 @@ class DocumentQueryUseCaseTest {
 
         assertEquals("Luz casa", view.serviceName());
         assertNull(useCase.list(ANA, "poliza", null, null, FIRST_PAGE).content().getFirst().serviceName());
+    }
+
+    @Test
+    void descargaElArchivoConSuNombreYTipo() throws Exception {
+        DocumentFile file = useCase.download(ANA, invoice);
+
+        assertEquals("luz-10.pdf", file.filename());
+        assertEquals("application/pdf", file.mimeType());
+        try (var content = file.content()) {
+            assertEquals("%PDF-1.4", new String(content.readAllBytes()));
+        }
+        assertThrows(NotFoundException.class, () -> useCase.download(BETO, invoice));
     }
 
     @Test

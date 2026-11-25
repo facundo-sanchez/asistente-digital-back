@@ -15,7 +15,9 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.acme.document.application.model.DocumentFile;
 import org.acme.document.application.model.UploadDocumentCommand;
+import org.acme.document.infrastructure.rest.ContentDisposition;
 import org.acme.document.application.usecase.DocumentQueryUseCase;
 import org.acme.document.application.usecase.UploadDocumentUseCase;
 import org.acme.document.infrastructure.rest.dto.DocumentResponse;
@@ -74,6 +76,21 @@ public class DocumentResource {
     @Operation(summary = "Consultar un documento", description = "404 si no existe, está borrado o es de otro usuario")
     public DocumentResponse get(@PathParam("id") UUID id) {
         return mapper.toResponse(documentQuery.get(currentUser.id(), id));
+    }
+
+    @GET
+    @Path("/{id}/download")
+    @Produces(MediaType.WILDCARD)
+    @Operation(summary = "Descargar el archivo", description = "inline=true para mostrarlo en el navegador (vista previa)")
+    public Response download(@PathParam("id") UUID id, @QueryParam("inline") boolean inline) {
+        DocumentFile file = documentQuery.download(currentUser.id(), id);
+        // RESTEasy envía el InputStream de a partes y lo cierra al terminar
+        return Response.ok(file.content(), file.mimeType())
+                .header("Content-Length", file.size())
+                .header("Content-Disposition", ContentDisposition.of(inline, file.filename()))
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Cache-Control", "private, no-store")
+                .build();
     }
 
     @POST
