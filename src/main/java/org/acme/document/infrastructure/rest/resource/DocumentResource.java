@@ -2,13 +2,17 @@ package org.acme.document.infrastructure.rest.resource;
 
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -19,8 +23,10 @@ import org.acme.document.application.model.DocumentFile;
 import org.acme.document.application.model.UploadDocumentCommand;
 import org.acme.document.infrastructure.rest.ContentDisposition;
 import org.acme.document.application.usecase.DocumentQueryUseCase;
+import org.acme.document.application.usecase.ManageDocumentUseCase;
 import org.acme.document.application.usecase.UploadDocumentUseCase;
 import org.acme.document.infrastructure.rest.dto.DocumentResponse;
+import org.acme.document.infrastructure.rest.dto.DocumentUpdateRequest;
 import org.acme.document.infrastructure.rest.mapper.DocumentRestMapper;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.shared.application.model.PageQuery;
@@ -52,6 +58,9 @@ public class DocumentResource {
     DocumentQueryUseCase documentQuery;
 
     @Inject
+    ManageDocumentUseCase manageDocument;
+
+    @Inject
     DocumentRestMapper mapper;
 
     @Inject
@@ -76,6 +85,21 @@ public class DocumentResource {
     @Operation(summary = "Consultar un documento", description = "404 si no existe, está borrado o es de otro usuario")
     public DocumentResponse get(@PathParam("id") UUID id) {
         return mapper.toResponse(documentQuery.get(currentUser.id(), id));
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Operation(summary = "Editar un documento", description = "Título, tipo, servicio y vencimiento. 400 si el servicio no es del usuario")
+    public DocumentResponse update(@PathParam("id") UUID id, @Valid @NotNull DocumentUpdateRequest request) {
+        return mapper.toResponse(manageDocument.update(currentUser.id(), id, mapper.toCommand(request)));
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @Operation(summary = "Eliminar un documento", description = "Baja lógica: deja de aparecer, el archivo se conserva")
+    public Response delete(@PathParam("id") UUID id) {
+        manageDocument.delete(currentUser.id(), id);
+        return Response.noContent().build();
     }
 
     @GET
