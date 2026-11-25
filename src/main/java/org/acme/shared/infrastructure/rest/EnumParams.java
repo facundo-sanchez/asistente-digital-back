@@ -11,15 +11,15 @@ public final class EnumParams {
     private EnumParams() {
     }
 
-    /** null o vacío = sin filtro. Un valor desconocido lanza 400 con "<label> inválida: <valor>". */
-    public static <E extends Enum<E>> E parse(Class<E> type, String value, String label) {
+    /** null o vacío = sin filtro. Un valor desconocido lanza 400 con "<invalidMessage>: <valor>". */
+    public static <E extends Enum<E>> E parse(Class<E> type, String value, String invalidMessage) {
         if (value == null || value.isBlank()) {
             return null;
         }
         try {
             return Enum.valueOf(type, value.trim());
         } catch (IllegalArgumentException e) {
-            throw new ServiceException(label + " inválida: " + value);
+            throw new ServiceException(invalidMessage + ": " + value);
         }
     }
 }

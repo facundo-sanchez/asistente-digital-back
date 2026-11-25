@@ -46,3 +46,6 @@ nb-configuration.xml
 
 # Claves JWT: nunca en el repo (generarlas con los comandos de .env.example)
 *.pem
+
+# Archivos subidos en desarrollo
+/data/

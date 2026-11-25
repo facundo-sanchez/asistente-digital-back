@@ -14,6 +14,7 @@ import java.util.UUID;
 public record DocumentResponse(
         UUID id,
         UUID serviceId,
+        @Schema(description = "Nombre del servicio asociado (null si no tiene)", example = "Luz casa") String serviceName,
         UUID assetId,
         UUID obligationId,
         DocumentType documentType,

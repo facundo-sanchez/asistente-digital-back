@@ -83,7 +83,7 @@ public class ServiceResource {
             @Min(value = 1, message = "El tamaño mínimo es 1")
             @Max(value = PageQuery.MAX_SIZE, message = "El tamaño máximo es 100") int size) {
         return PageResponse.from(
-                serviceQuery.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría"),
+                serviceQuery.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría inválida"),
                         active, new PageQuery(page, size)),
                 mapper::toResponse);
     }

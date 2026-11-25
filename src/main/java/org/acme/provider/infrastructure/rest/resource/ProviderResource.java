@@ -66,7 +66,7 @@ public class ProviderResource {
             @Min(value = 1, message = "El tamaño mínimo es 1")
             @Max(value = PageQuery.MAX_SIZE, message = "El tamaño máximo es 100") int size) {
         return PageResponse.from(
-                providers.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría"), new PageQuery(page, size)),
+                providers.list(currentUser.id(), query, EnumParams.parse(ServiceCategory.class, category, "Categoría inválida"), new PageQuery(page, size)),
                 mapper::toResponse);
     }
 
