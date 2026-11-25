@@ -24,8 +24,8 @@ import java.util.UUID;
  */
 public class InMemoryObligationRepository implements ObligationRepository {
 
-    final Map<UUID, Obligation> rows = new LinkedHashMap<>();
-    final Map<UUID, BigDecimal> paid = new HashMap<>();
+    public final Map<UUID, Obligation> rows = new LinkedHashMap<>();
+    public final Map<UUID, BigDecimal> paid = new HashMap<>();
 
     @Override
     public ObligationSummary save(Obligation obligation) {
