@@ -13,6 +13,7 @@ import java.util.UUID;
 public record ServiceResponse(
         UUID id,
         UUID providerId,
+        @Schema(description = "Nombre del proveedor, para mostrar sin otra consulta", example = "Coopelectric") String providerName,
         @Schema(example = "Luz casa") String name,
         @Schema(description = "Nro. de cliente / socio / suministro", example = "123456") String customerReference,
         ServiceCategory category,

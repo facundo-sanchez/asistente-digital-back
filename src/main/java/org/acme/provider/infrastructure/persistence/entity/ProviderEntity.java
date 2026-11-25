@@ -10,7 +10,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -41,7 +40,8 @@ public class ProviderEntity {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "email_domains", columnDefinition = "text[]")
-    private List<String> emailDomains;
+    // String[]: Hibernate lo mapea nativo a text[] (List<String> lo intentaba leer como JSON)
+    private String[] emailDomains;
 
     @Column(name = "active", nullable = false)
     private boolean active;

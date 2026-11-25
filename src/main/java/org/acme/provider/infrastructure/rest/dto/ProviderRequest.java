@@ -2,6 +2,7 @@ package org.acme.provider.infrastructure.rest.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.acme.shared.domain.model.ServiceCategory;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -17,5 +18,6 @@ public record ProviderRequest(
         ServiceCategory category,
 
         @Size(max = 500)
-        String website
+        @Pattern(regexp = "^https?://\\S+$", message = "El sitio web tiene que empezar con http:// o https://")
+        @Schema(example = "https://www.aguax.com.ar") String website
 ) {}

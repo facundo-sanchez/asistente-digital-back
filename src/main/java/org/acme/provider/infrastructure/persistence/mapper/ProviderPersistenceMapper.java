@@ -23,7 +23,7 @@ public interface ProviderPersistenceMapper {
     Map<String, Map<String, String>> toBodyFieldsJson(Map<String, EmailBodyField> fields);
 
     default EmailBodyField toBodyField(Map<String, String> json) {
-        return json == null ? null : new EmailBodyField(json.get("regex"), json.get("format"));
+        return json == null ? null : new EmailBodyField(json.get("regex"), json.get("format"), json.get("groups"));
     }
 
     default Map<String, String> toBodyFieldJson(EmailBodyField field) {
@@ -31,6 +31,7 @@ public interface ProviderPersistenceMapper {
         Map<String, String> json = new HashMap<>();
         json.put("regex", field.regex());
         if (field.format() != null) json.put("format", field.format());
+        if (field.groups() != null) json.put("groups", field.groups());
         return json;
     }
 }
