@@ -8,6 +8,9 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -17,10 +20,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.acme.service.application.usecase.ManageServiceUseCase;
 import org.acme.service.application.usecase.RegisterServiceUseCase;
 import org.acme.service.application.usecase.ServiceQueryUseCase;
 import org.acme.service.infrastructure.rest.dto.ServiceRequest;
 import org.acme.service.infrastructure.rest.dto.ServiceResponse;
+import org.acme.service.infrastructure.rest.dto.ServiceStatusRequest;
 import org.acme.service.infrastructure.rest.mapper.ServiceRestMapper;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.domain.model.ServiceCategory;
@@ -48,6 +53,9 @@ public class ServiceResource {
 
     @Inject
     ServiceQueryUseCase serviceQuery;
+
+    @Inject
+    ManageServiceUseCase manageService;
 
     @Inject
     ServiceRestMapper mapper;
@@ -84,5 +92,27 @@ public class ServiceResource {
     @Operation(summary = "Consultar un servicio", description = "404 si no existe o es de otro usuario")
     public ServiceResponse get(@PathParam("id") UUID id) {
         return mapper.toResponse(serviceQuery.get(currentUser.id(), id));
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Operation(summary = "Editar un servicio", description = "Mismas validaciones que el alta. No cambia el estado")
+    public ServiceResponse update(@PathParam("id") UUID id, @Valid @NotNull ServiceRequest request) {
+        return mapper.toResponse(manageService.update(currentUser.id(), id, mapper.toModel(request)));
+    }
+
+    @PATCH
+    @Path("/{id}/status")
+    @Operation(summary = "Activar o desactivar un servicio")
+    public ServiceResponse changeStatus(@PathParam("id") UUID id, @Valid @NotNull ServiceStatusRequest request) {
+        return mapper.toResponse(manageService.changeStatus(currentUser.id(), id, request.active()));
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @Operation(summary = "Dar de baja un servicio", description = "Baja lógica: lo desactiva y conserva su historial")
+    public Response delete(@PathParam("id") UUID id) {
+        manageService.delete(currentUser.id(), id);
+        return Response.noContent().build();
     }
 }

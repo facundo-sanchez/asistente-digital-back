@@ -59,7 +59,7 @@ class RegisterServiceUseCaseTest {
         ServiceException e = assertThrows(ServiceException.class,
                 () -> f.register.register(ServiceFixture.ANA, ServiceFixture.draft(f.betosOwn, "Gimnasio")));
 
-        assertEquals(RegisterServiceUseCase.UNKNOWN_PROVIDER, e.getMessage());
+        assertEquals(ServiceDraftValidator.UNKNOWN_PROVIDER, e.getMessage());
     }
 
     @Test
@@ -70,7 +70,7 @@ class RegisterServiceUseCaseTest {
         ServiceException e = assertThrows(ServiceException.class,
                 () -> f.register.register(ServiceFixture.ANA, ServiceFixture.draft(inactive, "Luz")));
 
-        assertEquals(RegisterServiceUseCase.INACTIVE_PROVIDER, e.getMessage());
+        assertEquals(ServiceDraftValidator.INACTIVE_PROVIDER, e.getMessage());
     }
 
     @Test
@@ -82,6 +82,6 @@ class RegisterServiceUseCaseTest {
 
         ServiceException e = assertThrows(ServiceException.class, () -> f.register.register(ServiceFixture.ANA, draft));
 
-        assertEquals(RegisterServiceUseCase.INVALID_DATES, e.getMessage());
+        assertEquals(ServiceDraftValidator.INVALID_DATES, e.getMessage());
     }
 }

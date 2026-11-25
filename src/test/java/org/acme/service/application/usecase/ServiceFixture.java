@@ -16,7 +16,9 @@ public class ServiceFixture {
 
     final InMemoryProviderRepository providers = new InMemoryProviderRepository();
     final InMemoryServiceRepository services = new InMemoryServiceRepository();
-    final RegisterServiceUseCase register = new RegisterServiceUseCase(services, providers);
+    final ServiceDraftValidator validator = new ServiceDraftValidator(providers);
+    final RegisterServiceUseCase register = new RegisterServiceUseCase(services, validator);
+    final ManageServiceUseCase manage = new ManageServiceUseCase(services, providers, validator);
     final ServiceQueryUseCase query = new ServiceQueryUseCase(services, providers);
 
     final Provider coopelectric = providers.add(Provider.builder()
