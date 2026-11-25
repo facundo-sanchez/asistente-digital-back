@@ -14,6 +14,7 @@ import java.util.UUID;
 public record ObligationResponse(
         UUID id,
         UUID serviceId,
+        @Schema(description = "Nombre del servicio asociado (null si no tiene)", example = "Luz casa") String serviceName,
         UUID invoiceId,
         UUID assetId,
         UUID recurrenceId,
