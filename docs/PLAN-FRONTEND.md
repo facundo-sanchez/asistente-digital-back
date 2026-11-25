@@ -45,7 +45,7 @@
 ## Fase 1 – Infraestructura de UI y cliente HTTP
 
 ### Tema y layout
-- [x] Tema MUI (paleta, tipografía Nunito, locale es) con `@mui/material-nextjs/v16-appRouter` — modo oscuro pendiente
+- [x] Tema MUI "Papel moneda" (ver DESIGN.md): paleta clara y oscura con selector y modo del sistema por defecto, tipografía Archivo, tintes por tipo de servicio, roseta guilloché, locale es (25/11/2026)
 - [x] Integración entre Tailwind 4 y MUI (`@layer theme, base, mui, components, utilities` + `enableCssLayer`)
 - [ ] `LocalizationProvider` de los date pickers (moment, locale `es`)
 - [x] Layout privado: sidebar con módulos, topbar con usuario y logout (`components/layout/AppShell`) — notificaciones en el módulo 8
@@ -84,8 +84,10 @@
 
 ## Fase 3 – Servicios y proveedores (CU-001) 🔗
 
-- [ ] Tipos `Service`, `Provider` y `ServiceCategory`
-- [ ] API: `GET/POST/PUT/DELETE /services`, `PATCH /services/{id}/status`, `GET /providers`
+> Se desarrolla en 5 partes: ver [MODULO-02-SERVICIOS.md](./MODULO-02-SERVICIOS.md).
+
+- [x] Tipos `Service`, `Provider` y `ServiceCategory`
+- [~] API: `GET/POST/PUT/DELETE /services`, `PATCH /services/{id}/status`, `GET /providers` (proveedores hecho en 2.1)
 - [ ] Listado de servicios con filtros (categoría, activo/inactivo)
 - [ ] Formulario de alta y edición: categoría, proveedor, referencia de cliente y periodicidad
 - [ ] Campo "Nro. de socio / suministro" destacado, con ayuda de dónde encontrarlo en la factura (es lo que asocia las facturas del email al servicio)
@@ -244,3 +246,4 @@
 | 25/11/2026 | Confirmación de email: adaptador SMTP en el backend (`EMAIL_DELIVERY=log\|smtp`, variables `SMTP_*`). Probado con un servidor SMTP real |
 | 25/11/2026 | Login con Google: `POST /auth/google/authorization` y `POST /auth/google` en el backend; `/api/auth/google` y su callback en el BFF; botón en login y registro. Probado de punta a punta contra un Google simulado (firma, PKCE, state, cancelación, reuso del código, vinculación) |
 | 25/11/2026 | Revisión de código (ponytail-review) y correcciones: claves JWT fuera del repo y obligatorias en producción; emails nunca al log en producción; refresh atómico con 409 cuando otro pedido ya rotó la sesión (el BFF y el proxy no borran las cookies); cambio de contraseña con sesión vencida; tests del id_token de Google (backend) y de `safeNextPath`/state (Vitest) |
+| 25/11/2026 | Rediseño "Papel moneda" (rama `feature/design-system`): diseño predeterminado de la app con modo claro y oscuro, shell con riel de tinta, pantallas de cuenta en dos paneles, inicio con estados vacíos y roseta guilloché, PRODUCT.md y DESIGN.md |

@@ -1,5 +1,6 @@
 package org.acme.shared.infrastructure.rest.dto;
 
+import org.acme.shared.application.model.PageResult;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
@@ -16,6 +17,11 @@ public record PageResponse<T>(
     public static <T> PageResponse<T> of(List<T> content, int page, int size, long totalElements) {
         int totalPages = size == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
         return new PageResponse<>(content, page, size, totalElements, totalPages);
+    }
+
+    /** Convierte una página de la capa de aplicación mapeando cada elemento a su DTO. */
+    public static <T, R> PageResponse<R> from(PageResult<T> result, Function<T, R> mapper) {
+        return of(result.content().stream().map(mapper).toList(), result.page(), result.size(), result.totalElements());
     }
 
     public <R> PageResponse<R> map(Function<T, R> mapper) {
