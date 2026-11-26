@@ -1,6 +1,13 @@
 package org.acme.document.application;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -23,5 +30,25 @@ class FileTypeTest {
         assertEquals(Optional.empty(), FileType.detect("MZ".getBytes(StandardCharsets.US_ASCII)));
         assertEquals(Optional.empty(), FileType.detect("RIFF0000WAVE".getBytes(StandardCharsets.US_ASCII)));
         assertEquals(Optional.empty(), FileType.detect(new byte[0]));
+    }
+
+    @TempDir
+    Path tmp;
+
+    @Test
+    void reconoceExcelPorSuContenido() throws IOException {
+        assertEquals(Optional.of(FileType.XLSX), FileType.detect(zip("resumen.xlsx", "xl/workbook.xml")));
+        assertEquals(Optional.empty(), FileType.detect(zip("carta.docx", "word/document.xml")), "otro ZIP no es Excel");
+        assertEquals(Optional.of(FileType.XLS), FileType.detect(new byte[]{(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1}));
+    }
+
+    private Path zip(String name, String entry) throws IOException {
+        Path file = tmp.resolve(name);
+        try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(file))) {
+            out.putNextEntry(new ZipEntry(entry));
+            out.write("<x/>".getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+        return file;
     }
 }
