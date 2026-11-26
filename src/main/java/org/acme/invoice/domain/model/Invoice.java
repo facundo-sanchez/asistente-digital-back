@@ -47,9 +47,10 @@ public class Invoice {
         confirmedAt = now;
     }
 
+    /** Rechazar una propuesta o anular una factura confirmada. Queda en el historial. */
     public void reject() {
-        if (status == InvoiceStatus.CONFIRMED) {
-            throw new ServiceException("No se puede rechazar una factura confirmada");
+        if (status == InvoiceStatus.REJECTED) {
+            throw new ServiceException("La factura ya está anulada");
         }
         status = InvoiceStatus.REJECTED;
     }

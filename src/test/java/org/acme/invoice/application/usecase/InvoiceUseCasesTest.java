@@ -12,6 +12,7 @@ import org.acme.invoice.domain.model.InvoiceStatus;
 import org.acme.obligation.application.usecase.InMemoryObligationRepository;
 import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.obligation.domain.model.Obligation;
+import org.acme.obligation.domain.model.ObligationStatus;
 import org.acme.obligation.domain.model.ObligationType;
 import org.acme.service.application.usecase.InMemoryServiceRepository;
 import org.acme.service.domain.model.Service;
@@ -42,6 +43,7 @@ class InvoiceUseCasesTest {
     private InMemoryDocumentRepository documents;
     private RegisterInvoiceUseCase register;
     private InvoiceQueryUseCase query;
+    private ManageInvoiceUseCase manage;
     private UUID light;
     private UUID betoGas;
 
@@ -56,6 +58,7 @@ class InvoiceUseCasesTest {
         InvoiceDraftValidator validator = new InvoiceDraftValidator(services, documents, invoices);
         register = new RegisterInvoiceUseCase(invoices, obligations, validator, Clock.fixed(NOW, ZoneOffset.UTC));
         query = new InvoiceQueryUseCase(invoices, services, obligations);
+        manage = new ManageInvoiceUseCase(invoices, obligations, validator, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -128,6 +131,35 @@ class InvoiceUseCasesTest {
         assertEquals(0, query.duplicates(ANA, light, null, "2026-12", new BigDecimal("1"), null).size());
         assertEquals(0, query.duplicates(ANA, light, "0001-1", null, null, id).size(), "al editar no cuenta la propia");
         assertEquals(0, query.duplicates(BETO, light, "0001-1", null, null, null).size(), "servicio ajeno");
+    }
+
+    @Test
+    void corregirCopiaLosDatosAlVencimiento() {
+        InvoiceView created = register.register(ANA, draft(light, "0001-1", "2026-12"));
+
+        InvoiceView fixed = manage.update(ANA, created.invoice().getId(),
+                draft(light, "0001-1", "2027-01").toBuilder().totalAmount(new BigDecimal("50000")).dueDate(LocalDate.of(2027, 1, 10)).build());
+
+        Obligation obligation = obligations.rows.get(fixed.obligation().obligation().getId());
+        assertEquals("Luz casa · factura 2027-01", obligation.getTitle());
+        assertEquals(new BigDecimal("50000"), obligation.getAmount());
+        assertEquals(LocalDate.of(2027, 1, 10), obligation.getDueDate());
+    }
+
+    @Test
+    void anularCancelaElVencimientoPeroNoSiTienePagos() {
+        InvoiceView paid = register.register(ANA, draft(light, "0001-1", "2026-11"));
+        InvoiceView free = register.register(ANA, draft(light, "0001-2", "2026-12"));
+        obligations.paid.put(paid.obligation().obligation().getId(), new BigDecimal("100"));
+
+        assertThrows(ServiceException.class, () -> manage.reject(ANA, paid.invoice().getId()));
+        assertThrows(ServiceException.class, () -> manage.update(ANA, paid.invoice().getId(), draft(light, "0001-1", "2026-11")));
+        manage.reject(ANA, free.invoice().getId());
+
+        assertEquals(InvoiceStatus.REJECTED, invoices.rows.get(free.invoice().getId()).getStatus());
+        assertEquals(ObligationStatus.CANCELLED, obligations.rows.get(free.obligation().obligation().getId()).getStatus());
+        assertThrows(ServiceException.class, () -> manage.reject(ANA, free.invoice().getId()), "ya anulada");
+        assertThrows(NotFoundException.class, () -> manage.reject(BETO, paid.invoice().getId()));
     }
 
     private static Invoice draft(UUID serviceId, String number, String period) {

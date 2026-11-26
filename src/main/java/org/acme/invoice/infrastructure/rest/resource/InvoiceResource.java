@@ -11,6 +11,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -20,6 +21,7 @@ import jakarta.ws.rs.core.Response;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.invoice.application.model.InvoiceFilter;
 import org.acme.invoice.application.usecase.InvoiceQueryUseCase;
+import org.acme.invoice.application.usecase.ManageInvoiceUseCase;
 import org.acme.invoice.application.usecase.RegisterInvoiceUseCase;
 import org.acme.invoice.domain.model.InvoiceStatus;
 import org.acme.invoice.infrastructure.rest.dto.InvoiceRequest;
@@ -53,6 +55,9 @@ public class InvoiceResource {
 
     @Inject
     InvoiceQueryUseCase invoiceQuery;
+
+    @Inject
+    ManageInvoiceUseCase manageInvoice;
 
     @Inject
     InvoiceRestMapper mapper;
@@ -106,5 +111,20 @@ public class InvoiceResource {
         return Response.status(Response.Status.CREATED)
                 .entity(mapper.toResponse(registerInvoice.register(currentUser.id(), mapper.toModel(request))))
                 .build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Operation(summary = "Corregir una factura", description = "Copia los cambios a su vencimiento. 400 si el vencimiento tiene pagos")
+    public InvoiceResponse update(@PathParam("id") UUID id, @Valid @NotNull InvoiceRequest request) {
+        return mapper.toResponse(manageInvoice.update(currentUser.id(), id, mapper.toModel(request)));
+    }
+
+    @POST
+    @Path("/{id}/reject")
+    @Operation(summary = "Anular una factura", description = "Cancela su vencimiento. 400 si tiene pagos")
+    public Response reject(@PathParam("id") UUID id) {
+        manageInvoice.reject(currentUser.id(), id);
+        return Response.noContent().build();
     }
 }
