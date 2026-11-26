@@ -2,6 +2,7 @@ package org.acme.document.application.port.output;
 
 import org.acme.document.domain.model.AiExtractionResult;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,4 +16,7 @@ public interface ExtractionResultRepository {
 
     /** La última propuesta del documento. */
     Optional<AiExtractionResult> findLatestForDocument(UUID userId, UUID documentId);
+
+    /** Las del usuario que esperan revisión, las más viejas primero. */
+    List<AiExtractionResult> findPending(UUID userId);
 }

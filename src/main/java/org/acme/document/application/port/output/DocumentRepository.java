@@ -5,6 +5,8 @@ import org.acme.document.domain.model.Document;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,4 +24,7 @@ public interface DocumentRepository {
 
     /** Documento no borrado del usuario con ese SHA-256 (para detectar el mismo archivo). */
     Optional<Document> findActiveByChecksum(UUID userId, String checksum);
+
+    /** No borrados que vencen entre from y to (inclusive), los más próximos primero. */
+    List<Document> findExpiringBetween(UUID userId, LocalDate from, LocalDate to);
 }

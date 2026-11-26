@@ -7,6 +7,7 @@ import org.acme.user.domain.model.User;
 import org.acme.user.infrastructure.persistence.entity.UserEntity;
 import org.acme.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,5 +51,10 @@ public class UserRepositoryAdapter implements UserRepository {
             repository.flush();
         }
         return mapper.toModel(entity);
+    }
+
+    @Override
+    public List<User> findActive() {
+        return repository.list("active", true).stream().map(mapper::toModel).toList();
     }
 }

@@ -2,9 +2,11 @@ package org.acme.document.application.usecase;
 
 import org.acme.document.application.port.output.ExtractionResultRepository;
 import org.acme.document.domain.model.AiExtractionResult;
+import org.acme.document.domain.model.ExtractionValidationStatus;
 
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -37,5 +39,11 @@ public class InMemoryExtractionResultRepository implements ExtractionResultRepos
     public Optional<AiExtractionResult> findLatestForDocument(UUID userId, UUID documentId) {
         return rows.values().stream().filter(r -> r.getUserId().equals(userId) && r.getDocumentId().equals(documentId))
                 .max(Comparator.comparing(AiExtractionResult::getCreatedAt)).map(r -> r.toBuilder().build());
+    }
+
+    @Override
+    public List<AiExtractionResult> findPending(UUID userId) {
+        return rows.values().stream().filter(r -> r.getUserId().equals(userId) && r.getValidationStatus() == ExtractionValidationStatus.PENDING)
+                .sorted(Comparator.comparing(AiExtractionResult::getCreatedAt)).toList();
     }
 }

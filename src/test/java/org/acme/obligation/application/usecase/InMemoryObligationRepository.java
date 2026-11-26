@@ -4,6 +4,7 @@ import org.acme.obligation.application.model.ObligationFilter;
 import org.acme.obligation.application.port.output.ObligationRepository;
 import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.obligation.domain.model.Obligation;
+import org.acme.obligation.domain.model.ObligationStatus;
 import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
@@ -72,6 +73,14 @@ public class InMemoryObligationRepository implements ObligationRepository {
         return Map.copyOf(rows.values().stream()
                 .filter(o -> o.getUserId().equals(userId) && o.getInvoiceId() != null && invoiceIds.contains(o.getInvoiceId()))
                 .collect(Collectors.toMap(Obligation::getInvoiceId, this::summary)));
+    }
+
+    @Override
+    public List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to) {
+        return rows.values().stream()
+                .filter(o -> o.getUserId().equals(userId) && !o.getDueDate().isBefore(from) && !o.getDueDate().isAfter(to)
+                        && o.getStatus() != ObligationStatus.CANCELLED)
+                .map(this::summary).toList();
     }
 
     private ObligationSummary summary(Obligation obligation) {
