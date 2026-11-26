@@ -31,7 +31,7 @@ class StatementChecksTest {
         ExtractedStatement pdf = BbvaSamples.pdf();
         List<ExtractedTransaction> transactions = new ArrayList<>(pdf.transactions());
         transactions.remove(2); // se perdió la carga de combustible
-        transactions.add(new ExtractedTransaction(null, "X", "X", 13, 12, BigDecimal.ONE, "ARS", "INSTALLMENT", null, null));
+        transactions.add(new ExtractedTransaction(null, "X", "X", 13, 12, BigDecimal.ONE, "ARS", "INSTALLMENT", null, null, null));
         ExtractedStatement broken = new ExtractedStatement(pdf.bank(), pdf.accountLastFour(), pdf.closingDate(), pdf.dueDate(),
                 pdf.nextClosingDate(), pdf.nextDueDate(), pdf.previousBalance(), pdf.previousBalanceUsd(), pdf.totalAmount(),
                 pdf.totalAmountUsd(), pdf.minimumPayment(), pdf.cards(), transactions);

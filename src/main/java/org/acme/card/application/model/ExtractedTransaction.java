@@ -17,5 +17,7 @@ public record ExtractedTransaction(
         String currency,
         String type,
         String cardLastFour,
-        String reference
+        String reference,
+        /** Rubro propuesto (uno de SpendingCategory); cualquier otro valor queda como OTHER. */
+        String category
 ) {}

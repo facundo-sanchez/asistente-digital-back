@@ -20,6 +20,7 @@ import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardTransaction;
 import org.acme.card.domain.model.CardTransactionType;
 import org.acme.card.domain.model.CategorySource;
+import org.acme.card.domain.model.SpendingCategory;
 import org.acme.integration.application.port.output.EmailOriginRepository;
 import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.document.domain.model.AiExtractionResult;
@@ -54,11 +55,13 @@ public class StatementExtractionUseCase {
     private final ExtractionReviews reviews;
     private final ObjectMapper json;
     private final EmailOriginRepository origins;
+    private final NewTransactions newTransactions;
 
     @Inject
     public StatementExtractionUseCase(CardRepository cards, CardStatementRepository statements,
                                       CardTransactionRepository transactions, ManageCardStatementUseCase manageStatement,
-                                      ExtractionReviews reviews, ObjectMapper json, EmailOriginRepository origins) {
+                                      ExtractionReviews reviews, ObjectMapper json, EmailOriginRepository origins,
+                                      NewTransactions newTransactions) {
         this.cards = cards;
         this.statements = statements;
         this.transactions = transactions;
@@ -66,6 +69,7 @@ public class StatementExtractionUseCase {
         this.reviews = reviews;
         this.json = json;
         this.origins = origins;
+        this.newTransactions = newTransactions;
     }
 
     public StatementReview review(UUID userId, UUID extractionId) {
@@ -75,9 +79,13 @@ public class StatementExtractionUseCase {
         List<String> warnings = new ArrayList<>(StatementChecks.warnings(statement));
         if (card.isEmpty()) {
             warnings.add(0, "No encontramos la tarjeta de este resumen entre las tuyas: elegila o registrala.");
-        } else if (statement.dueDate() != null && result.getValidationStatus() == ExtractionValidationStatus.PENDING
-                && statements.findConfirmedByDueDate(userId, card.get().getId(), statement.dueDate()).isPresent()) {
-            warnings.add(0, "Ya cargaste un resumen de esa tarjeta con ese vencimiento.");
+        } else if (statement.dueDate() != null && result.getValidationStatus() == ExtractionValidationStatus.PENDING) {
+            Optional<CardStatement> existing = statements.findConfirmedByDueDate(userId, card.get().getId(), statement.dueDate());
+            if (existing.isPresent()) {
+                warnings.add(0, withoutMovements(userId, existing.get())
+                        ? "Ya tenés este resumen registrado sin consumos (llegó por email): al confirmar se le suman estos movimientos."
+                        : "Ya cargaste un resumen de esa tarjeta con ese vencimiento.");
+            }
         }
         if (statement.transactionsOrEmpty().isEmpty() && origins.findByDocument(result.getDocumentId()).isPresent()) {
             warnings.add("Este resumen llegó por email y trae solo los totales, sin el detalle de consumos. Confirmalo para registrar el vencimiento.");
@@ -99,6 +107,12 @@ public class StatementExtractionUseCase {
             throw new ServiceException(DUE_DATE_REQUIRED);
         }
 
+        Optional<CardStatement> withoutMovements = statements.findConfirmedByDueDate(userId, confirmation.cardId(), confirmation.dueDate())
+                .filter(existing -> withoutMovements(userId, existing));
+        if (withoutMovements.isPresent()) {
+            return addMovements(userId, result, extracted, withoutMovements.get());
+        }
+
         // Mismas validaciones y vencimientos que la carga manual (tarjeta del usuario, RN-016, monedas)
         CardStatementView view = manageStatement.register(userId, CardStatement.builder()
                 .cardId(confirmation.cardId())
@@ -115,10 +129,7 @@ public class StatementExtractionUseCase {
                 .build());
         CardStatement statement = view.statement();
         LocalDate fallbackDate = Objects.requireNonNullElse(confirmation.closingDate(), confirmation.dueDate());
-        transactions.saveAll(extracted.transactionsOrEmpty().stream()
-                .map(t -> toTransaction(t, userId, statement, fallbackDate))
-                .flatMap(Optional::stream)
-                .toList());
+        saveMovements(userId, extracted, statement, fallbackDate);
 
         reviews.close(userId, result, changed(extracted, confirmation) ? ExtractionValidationStatus.CORRECTED : ExtractionValidationStatus.CONFIRMED,
                 cards.findByIdForUser(userId, confirmation.cardId()).map(Card::getServiceId).orElse(null));
@@ -145,6 +156,34 @@ public class StatementExtractionUseCase {
     }
 
     /**
+     * El resumen ya estaba (llegó por email solo con totales): se le suman los movimientos y el archivo, sin tocar sus
+     * totales ni sus vencimientos (11.5).
+     */
+    private CardStatementView addMovements(UUID userId, AiExtractionResult result, ExtractedStatement extracted, CardStatement existing) {
+        if (existing.getDocumentId() == null) {
+            existing.setDocumentId(result.getDocumentId());
+            statements.save(existing);
+        }
+        saveMovements(userId, extracted, existing, Objects.requireNonNullElse(existing.getClosingDate(), existing.getDueDate()));
+        reviews.close(userId, result, ExtractionValidationStatus.CONFIRMED,
+                cards.findByIdForUser(userId, existing.getCardId()).map(Card::getServiceId).orElse(null));
+        return manageStatement.get(userId, existing.getId());
+    }
+
+    private void saveMovements(UUID userId, ExtractedStatement extracted, CardStatement statement, LocalDate fallbackDate) {
+        List<CardTransaction> fresh = extracted.transactionsOrEmpty().stream()
+                .map(t -> toTransaction(t, userId, statement, fallbackDate))
+                .flatMap(Optional::stream)
+                .toList();
+        newTransactions.prepare(userId, fresh);
+        transactions.saveAll(fresh);
+    }
+
+    private boolean withoutMovements(UUID userId, CardStatement statement) {
+        return transactions.findForStatement(userId, statement.getId()).isEmpty();
+    }
+
+    /**
      * Un movimiento de la propuesta como movimiento del resumen. Se descartan los que no tienen
      * importe; pagos y devoluciones van negativos; una cuota imposible se guarda sin cuota.
      */
@@ -164,6 +203,7 @@ public class StatementExtractionUseCase {
                 .transactionDate(t.date() != null ? t.date() : fallbackDate)
                 .description(cut(description, 255))
                 .merchantName(merchant)
+                .category(category(t.category()))
                 .categorySource(CategorySource.AI)
                 .transactionType(type)
                 .amount(amount)
@@ -172,6 +212,14 @@ public class StatementExtractionUseCase {
                 .installmentTotal(installment ? t.installmentTotal() : null)
                 .reference(t.reference() == null ? null : cut(t.reference(), 100))
                 .build());
+    }
+
+    private static SpendingCategory category(String value) {
+        try {
+            return value == null ? SpendingCategory.OTHER : SpendingCategory.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return SpendingCategory.OTHER;
+        }
     }
 
     private static CardTransactionType type(ExtractedTransaction t) {
