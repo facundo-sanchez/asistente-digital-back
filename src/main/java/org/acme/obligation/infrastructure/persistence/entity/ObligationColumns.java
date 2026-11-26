@@ -7,6 +7,8 @@ import org.acme.obligation.domain.model.ObligationStatus;
 import org.acme.obligation.domain.model.ObligationType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -51,6 +53,8 @@ public abstract class ObligationColumns {
     @Column(name = "amount", precision = 19, scale = 4)
     private BigDecimal amount;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", columnDefinition = "char(3)")
     private String currency;
 

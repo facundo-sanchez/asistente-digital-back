@@ -7,6 +7,8 @@ import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardStatementStatus;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -56,6 +58,8 @@ public class CardStatementEntity {
     @Column(name = "next_due_date")
     private LocalDate nextDueDate;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency;
 

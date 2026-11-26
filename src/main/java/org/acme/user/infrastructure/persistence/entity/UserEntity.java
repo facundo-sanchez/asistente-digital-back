@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.acme.user.domain.model.UserRole;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -41,6 +43,8 @@ public class UserEntity {
     @Column(name = "locale", nullable = false, length = 10)
     private String locale;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "default_currency", nullable = false, columnDefinition = "char(3)")
     private String defaultCurrency;
 

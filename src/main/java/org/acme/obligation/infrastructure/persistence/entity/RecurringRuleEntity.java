@@ -8,6 +8,8 @@ import org.acme.obligation.domain.model.RecurrenceOrigin;
 import org.acme.shared.domain.model.BillingFrequency;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,6 +46,10 @@ public class RecurringRuleEntity {
     @Column(name = "frequency", nullable = false, length = 30)
     private BillingFrequency frequency;
 
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+
     @Column(name = "day_of_month", columnDefinition = "smallint")
     private Integer dayOfMonth;
 
@@ -53,6 +59,8 @@ public class RecurringRuleEntity {
     @Column(name = "estimated_amount", precision = 19, scale = 4)
     private BigDecimal estimatedAmount;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", columnDefinition = "char(3)")
     private String currency;
 
