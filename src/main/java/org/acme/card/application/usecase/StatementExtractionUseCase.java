@@ -20,6 +20,7 @@ import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardTransaction;
 import org.acme.card.domain.model.CardTransactionType;
 import org.acme.card.domain.model.CategorySource;
+import org.acme.integration.application.port.output.EmailOriginRepository;
 import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.document.domain.model.AiExtractionResult;
 import org.acme.document.domain.model.ExtractionValidationStatus;
@@ -52,17 +53,19 @@ public class StatementExtractionUseCase {
     private final ManageCardStatementUseCase manageStatement;
     private final ExtractionReviews reviews;
     private final ObjectMapper json;
+    private final EmailOriginRepository origins;
 
     @Inject
     public StatementExtractionUseCase(CardRepository cards, CardStatementRepository statements,
                                       CardTransactionRepository transactions, ManageCardStatementUseCase manageStatement,
-                                      ExtractionReviews reviews, ObjectMapper json) {
+                                      ExtractionReviews reviews, ObjectMapper json, EmailOriginRepository origins) {
         this.cards = cards;
         this.statements = statements;
         this.transactions = transactions;
         this.manageStatement = manageStatement;
         this.reviews = reviews;
         this.json = json;
+        this.origins = origins;
     }
 
     public StatementReview review(UUID userId, UUID extractionId) {
@@ -75,6 +78,9 @@ public class StatementExtractionUseCase {
         } else if (statement.dueDate() != null && result.getValidationStatus() == ExtractionValidationStatus.PENDING
                 && statements.findConfirmedByDueDate(userId, card.get().getId(), statement.dueDate()).isPresent()) {
             warnings.add(0, "Ya cargaste un resumen de esa tarjeta con ese vencimiento.");
+        }
+        if (statement.transactionsOrEmpty().isEmpty() && origins.findByDocument(result.getDocumentId()).isPresent()) {
+            warnings.add("Este resumen llegó por email y trae solo los totales, sin el detalle de consumos. Confirmalo para registrar el vencimiento.");
         }
         UUID statementId = statements.findByExtraction(userId, extractionId).map(CardStatement::getId).orElse(null);
         return new StatementReview(result.getId(), result.getDocumentId(), result.getValidationStatus(), statement,

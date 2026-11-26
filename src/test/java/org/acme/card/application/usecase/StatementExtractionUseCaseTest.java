@@ -75,7 +75,7 @@ class StatementExtractionUseCaseTest {
         var manage = new ManageCardStatementUseCase(statements, cards,
                 new CardStatementDraftValidator(cards, statements, documents), new StatementObligations(new InMemoryObligationRepository()), clock);
         useCase = new StatementExtractionUseCase(cards, statements, transactions, manage,
-                new ExtractionReviews(extractions, documents, jobs, clock), json);
+                new ExtractionReviews(extractions, documents, jobs, clock), json, documentId -> java.util.Optional.empty());
     }
 
     @Test

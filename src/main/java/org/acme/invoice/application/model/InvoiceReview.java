@@ -15,6 +15,8 @@ public record InvoiceReview(
         ExtractionValidationStatus status,
         ExtractedInvoice invoice,
         UUID suggestedServiceId,
+        /** Proveedor del catálogo si llegó por email (para registrar el servicio que falta). */
+        UUID suggestedProviderId,
         List<String> warnings,
         UUID invoiceId
 ) {}

@@ -44,6 +44,7 @@ class GmailIntegrationTest {
     private final RecordingDocumentImporter importer = new RecordingDocumentImporter();
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-26T12:30:00Z"), ZoneOffset.UTC);
     private final UUID ana = UUID.randomUUID();
+    private final List<Integration> alerts = new java.util.ArrayList<>();
 
     private ConnectGmailUseCase connect;
     private GmailSyncUseCase sync;
@@ -51,8 +52,8 @@ class GmailIntegrationTest {
     @BeforeEach
     void setUp() {
         PlainTokenCipher cipher = new PlainTokenCipher();
-        GmailAccess access = new GmailAccess(gmail, integrations, credentials, cipher, clock);
-        connect = new ConnectGmailUseCase(gmail, integrations, credentials, cipher, new TestAppSettings(new TestGoogleSettings(true)),
+        GmailAccess access = new GmailAccess(gmail, integrations, credentials, cipher, alerts::add, clock);
+        connect = new ConnectGmailUseCase(gmail, integrations, credentials, processed, cipher, new TestAppSettings(new TestGoogleSettings(true)),
                 new TestIntegrationSettings(), clock);
         sync = new GmailSyncUseCase(gmail, access, integrations, processed, () -> RULES, services, importer, new TestIntegrationSettings(), clock);
     }
@@ -76,6 +77,8 @@ class GmailIntegrationTest {
         assertTrue(gmail.queries.getFirst().startsWith("from:(factura@factura.camuzzigas.com.ar OR camuzzigas.com.ar OR banco.com.ar) after:"));
 
         assertEquals(0, sync.syncNow(ana, gmailAccount.getId()), "lo procesado no se vuelve a procesar");
+        assertEquals(3, connect.detected(ana, gmailAccount.getId(), new org.acme.shared.application.model.PageQuery(0, 20)).totalElements());
+        assertThrows(RuntimeException.class, () -> connect.detected(UUID.randomUUID(), gmailAccount.getId(), new org.acme.shared.application.model.PageQuery(0, 20)));
         assertNotNull(integrations.rows.get(gmailAccount.getId()).getLastSyncAt());
     }
 
@@ -116,12 +119,13 @@ class GmailIntegrationTest {
         Integration account = connect.connect(ana, "c1", "v1", null);
         gmail.refreshRevoked = true;
         Clock later = Clock.fixed(Instant.parse("2026-11-26T15:00:00Z"), ZoneOffset.UTC);
-        GmailSyncUseCase laterSync = new GmailSyncUseCase(gmail, new GmailAccess(gmail, integrations, credentials, new PlainTokenCipher(), later),
+        GmailSyncUseCase laterSync = new GmailSyncUseCase(gmail, new GmailAccess(gmail, integrations, credentials, new PlainTokenCipher(), alerts::add, later),
                 integrations, processed, () -> RULES, services, importer, new TestIntegrationSettings(), later);
 
         laterSync.syncAll();
 
         assertEquals(IntegrationStatus.REAUTH_REQUIRED, integrations.rows.get(account.getId()).getStatus());
+        assertEquals(1, alerts.size(), "se avisa una vez para reconectar");
         laterSync.syncAll();
         assertTrue(gmail.queries.isEmpty(), "una cuenta que pide reconectar no se sincroniza");
     }

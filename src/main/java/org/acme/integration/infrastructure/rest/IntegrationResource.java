@@ -6,20 +6,25 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import org.acme.integration.application.usecase.ConnectGmailUseCase;
 import org.acme.integration.application.usecase.GmailSyncUseCase;
 import org.acme.integration.infrastructure.rest.dto.AuthorizationUrlResponse;
+import org.acme.integration.infrastructure.rest.dto.DetectedEmailResponse;
 import org.acme.integration.infrastructure.rest.dto.GmailAuthorizationRequest;
 import org.acme.integration.infrastructure.rest.dto.GmailConnectRequest;
 import org.acme.integration.infrastructure.rest.dto.IntegrationResponse;
 import org.acme.integration.infrastructure.rest.dto.SyncResponse;
 import org.acme.integration.infrastructure.rest.mapper.IntegrationRestMapper;
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.infrastructure.rest.dto.PageResponse;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
@@ -77,6 +82,14 @@ public class IntegrationResource {
         IntegrationResponse integration = gmail.list(currentUser.id()).stream().filter(i -> i.getId().equals(id)).findFirst()
                 .map(mapper::toResponse).orElse(null);
         return new SyncResponse(imported, integration);
+    }
+
+    @GET
+    @Path("/{id}/emails")
+    @Operation(summary = "Detectado en tu correo", description = "Emails revisados y su resultado: importado, descartado, duplicado o falló")
+    public PageResponse<DetectedEmailResponse> detected(@PathParam("id") UUID id, @QueryParam("page") @DefaultValue("0") int page,
+                                                        @QueryParam("size") @DefaultValue("20") int size) {
+        return PageResponse.from(gmail.detected(currentUser.id(), id, new PageQuery(page, size)), mapper::toResponse);
     }
 
     @DELETE

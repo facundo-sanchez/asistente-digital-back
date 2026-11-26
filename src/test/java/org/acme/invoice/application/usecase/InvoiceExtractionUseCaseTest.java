@@ -62,7 +62,7 @@ class InvoiceExtractionUseCaseTest {
         var register = new RegisterInvoiceUseCase(invoices, new InMemoryObligationRepository(),
                 new InvoiceDraftValidator(services, documents, invoices), clock);
         useCase = new InvoiceExtractionUseCase(new ExtractionReviews(extractions, documents, new InMemoryProcessingJobRepository(), clock),
-                services, invoices, register, json);
+                services, invoices, register, json, documentId -> java.util.Optional.empty());
     }
 
     @Test

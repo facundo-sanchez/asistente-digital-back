@@ -1,5 +1,7 @@
 package org.acme.integration.infrastructure.persistence.repository;
 
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -9,6 +11,8 @@ import org.acme.integration.domain.model.IntegrationProcessedItem;
 import org.acme.integration.domain.model.ProcessedItemResult;
 import org.acme.integration.infrastructure.persistence.entity.IntegrationProcessedItemEntity;
 import org.acme.integration.infrastructure.persistence.mapper.IntegrationPersistenceMapper;
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.application.model.PageResult;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -43,5 +47,12 @@ public class ProcessedItemRepositoryAdapter implements ProcessedItemRepository {
     public Optional<Instant> oldestFailed(UUID integrationId) {
         return repository.find("integrationId = ?1 and result = ?2 and receivedAt is not null", Sort.by("receivedAt"), integrationId,
                 ProcessedItemResult.FAILED).firstResultOptional().map(IntegrationProcessedItemEntity::getReceivedAt);
+    }
+
+    @Override
+    public PageResult<IntegrationProcessedItem> findForIntegration(UUID integrationId, PageQuery page) {
+        PanacheQuery<IntegrationProcessedItemEntity> query = repository.find("integrationId", Sort.descending("receivedAt", "processedAt"), integrationId)
+                .page(Page.of(page.page(), page.size()));
+        return new PageResult<>(query.list().stream().map(mapper::toModel).toList(), page.page(), page.size(), query.count());
     }
 }

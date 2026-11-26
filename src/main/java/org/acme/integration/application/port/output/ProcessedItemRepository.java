@@ -1,6 +1,8 @@
 package org.acme.integration.application.port.output;
 
 import org.acme.integration.domain.model.IntegrationProcessedItem;
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.application.model.PageResult;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -15,4 +17,7 @@ public interface ProcessedItemRepository {
 
     /** Cuándo llegó el email más viejo que falló (para volver a buscarlo). */
     Optional<Instant> oldestFailed(UUID integrationId);
+
+    /** Lo procesado de la cuenta, lo más nuevo primero. */
+    PageResult<IntegrationProcessedItem> findForIntegration(UUID integrationId, PageQuery page);
 }

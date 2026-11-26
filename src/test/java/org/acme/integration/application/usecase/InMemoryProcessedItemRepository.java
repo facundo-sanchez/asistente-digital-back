@@ -3,6 +3,8 @@ package org.acme.integration.application.usecase;
 import org.acme.integration.application.port.output.ProcessedItemRepository;
 import org.acme.integration.domain.model.IntegrationProcessedItem;
 import org.acme.integration.domain.model.ProcessedItemResult;
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.application.model.PageResult;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,5 +34,11 @@ public class InMemoryProcessedItemRepository implements ProcessedItemRepository 
     public Optional<Instant> oldestFailed(UUID integrationId) {
         return rows.stream().filter(i -> i.getIntegrationId().equals(integrationId) && i.getResult() == ProcessedItemResult.FAILED
                 && i.getReceivedAt() != null).map(IntegrationProcessedItem::getReceivedAt).min(Instant::compareTo);
+    }
+
+    @Override
+    public PageResult<IntegrationProcessedItem> findForIntegration(UUID integrationId, PageQuery page) {
+        List<IntegrationProcessedItem> found = rows.stream().filter(i -> i.getIntegrationId().equals(integrationId)).toList();
+        return new PageResult<>(found, page.page(), page.size(), found.size());
     }
 }

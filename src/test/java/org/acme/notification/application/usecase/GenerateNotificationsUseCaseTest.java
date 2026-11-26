@@ -109,7 +109,7 @@ class GenerateNotificationsUseCaseTest {
     void lasPreferenciasCompletanLoQueFaltaConLosValoresPorDefecto() {
         List<NotificationPreference> all = preferences.replace(ana, List.of(
                 pref(NotificationChannel.PUSH, NotificationType.ALL, true, List.of(1)))).preferences();
-        assertEquals(10, all.size(), "WEB y EMAIL: ALL más 4 tipos; PUSH se ignora");
+        assertEquals(12, all.size(), "WEB y EMAIL: ALL más 5 tipos; PUSH se ignora");
         assertFalse(preferences.settings(ana).wants(NotificationChannel.EMAIL, NotificationType.DOCUMENT_DETECTED));
         assertEquals(List.of(0, 1, 3), preferences.settings(ana).days(NotificationChannel.EMAIL));
     }

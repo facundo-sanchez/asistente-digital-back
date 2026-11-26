@@ -11,12 +11,16 @@ import org.acme.integration.application.model.GmailTokens;
 import org.acme.integration.application.port.output.GmailClient;
 import org.acme.integration.application.port.output.IntegrationCredentialRepository;
 import org.acme.integration.application.port.output.IntegrationRepository;
+import org.acme.integration.application.port.output.ProcessedItemRepository;
 import org.acme.integration.application.port.output.TokenCipher;
 import org.acme.integration.domain.model.Integration;
 import org.acme.integration.domain.model.IntegrationCredential;
+import org.acme.integration.domain.model.IntegrationProcessedItem;
 import org.acme.integration.domain.model.IntegrationProvider;
 import org.acme.integration.domain.model.IntegrationStatus;
 import org.acme.shared.application.AppSettings;
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.application.model.PageResult;
 import org.jboss.logging.Logger;
 
 import java.net.URI;
@@ -43,6 +47,7 @@ public class ConnectGmailUseCase {
     private final GmailClient gmail;
     private final IntegrationRepository integrations;
     private final IntegrationCredentialRepository credentials;
+    private final ProcessedItemRepository processed;
     private final TokenCipher cipher;
     private final AppSettings app;
     private final IntegrationSettings settings;
@@ -50,10 +55,11 @@ public class ConnectGmailUseCase {
 
     @Inject
     public ConnectGmailUseCase(GmailClient gmail, IntegrationRepository integrations, IntegrationCredentialRepository credentials,
-                               TokenCipher cipher, AppSettings app, IntegrationSettings settings, Clock clock) {
+                               ProcessedItemRepository processed, TokenCipher cipher, AppSettings app, IntegrationSettings settings, Clock clock) {
         this.gmail = gmail;
         this.integrations = integrations;
         this.credentials = credentials;
+        this.processed = processed;
         this.cipher = cipher;
         this.app = app;
         this.settings = settings;
@@ -97,6 +103,12 @@ public class ConnectGmailUseCase {
     /** Las cuentas conectadas o que piden reconectar (las desconectadas no). */
     public List<Integration> list(UUID userId) {
         return integrations.findForUser(userId).stream().filter(i -> i.getStatus() != IntegrationStatus.DISCONNECTED).toList();
+    }
+
+    /** "Detectado en tu correo": qué emails se revisaron y qué pasó con cada uno. */
+    public PageResult<IntegrationProcessedItem> detected(UUID userId, UUID integrationId, PageQuery page) {
+        integrations.findByIdForUser(userId, integrationId).orElseThrow(() -> new NotFoundException("integración"));
+        return processed.findForIntegration(integrationId, page);
     }
 
     @Transactional
