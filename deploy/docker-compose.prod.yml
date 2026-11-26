@@ -1,0 +1,57 @@
+# Producción en una sola máquina (ej. Oracle Cloud Always Free): Postgres, el backend y Caddy (HTTPS).
+# Uso, desde esta carpeta:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# Guía completa: deploy/README.md
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: asistente_digital
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d asistente_digital"]
+      interval: 10s
+      retries: 10
+    # Sin puertos publicados: solo la ve el backend, por la red interna
+
+  backend:
+    build: ..
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env.prod
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/asistente_digital
+      JWT_PRIVATE_KEY_LOCATION: file:/run/secrets/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/run/secrets/jwt-public.pem
+    volumes:
+      - documents:/data/documentos
+      - ./secrets/jwt-private.pem:/run/secrets/jwt-private.pem:ro
+      - ./secrets/jwt-public.pem:/run/secrets/jwt-public.pem:ro
+    # Sin puertos publicados: entra solo por Caddy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  documents:
+  caddy-data:
+  caddy-config:

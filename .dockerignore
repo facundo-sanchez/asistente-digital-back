@@ -1,5 +1,10 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+target
+data
+deploy
+docs
+.env
+.env.*
+**/*.pem
+.git
+.idea
+.vscode
