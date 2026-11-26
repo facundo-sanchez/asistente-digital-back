@@ -2,6 +2,8 @@ package org.acme.integration.application.port.output;
 
 import org.acme.integration.domain.model.IntegrationProcessedItem;
 
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProcessedItemRepository {
@@ -10,4 +12,7 @@ public interface ProcessedItemRepository {
     boolean existsMessage(UUID integrationId, String externalMessageId);
 
     IntegrationProcessedItem save(IntegrationProcessedItem item);
+
+    /** Cuándo llegó el email más viejo que falló (para volver a buscarlo). */
+    Optional<Instant> oldestFailed(UUID integrationId);
 }

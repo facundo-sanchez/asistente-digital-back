@@ -159,7 +159,13 @@ public class GmailSyncUseCase {
         return ids;
     }
 
+    /** Desde la última revisión, "desde cuándo" o la conexión; y si algo falló antes de eso, desde ese email (para reintentarlo). */
     private Instant since(Integration integration) {
+        Instant since = usualSince(integration);
+        return processed.oldestFailed(integration.getId()).map(failed -> failed.minus(OVERLAP)).filter(f -> f.isBefore(since)).orElse(since);
+    }
+
+    private Instant usualSince(Integration integration) {
         if (integration.getLastSyncAt() != null) return integration.getLastSyncAt().minus(OVERLAP);
         if (integration.getSyncFrom() != null) return integration.getSyncFrom().atStartOfDay(ZoneOffset.UTC).toInstant();
         // "Solo los nuevos": desde que se conectó

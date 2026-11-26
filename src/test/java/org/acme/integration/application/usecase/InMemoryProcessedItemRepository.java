@@ -4,8 +4,10 @@ import org.acme.integration.application.port.output.ProcessedItemRepository;
 import org.acme.integration.domain.model.IntegrationProcessedItem;
 import org.acme.integration.domain.model.ProcessedItemResult;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class InMemoryProcessedItemRepository implements ProcessedItemRepository {
@@ -24,5 +26,11 @@ public class InMemoryProcessedItemRepository implements ProcessedItemRepository 
                 && i.getExternalAttachmentId().equals(item.getExternalAttachmentId()) && i.getResult() == ProcessedItemResult.FAILED);
         rows.add(item.toBuilder().id(UUID.randomUUID()).build());
         return item;
+    }
+
+    @Override
+    public Optional<Instant> oldestFailed(UUID integrationId) {
+        return rows.stream().filter(i -> i.getIntegrationId().equals(integrationId) && i.getResult() == ProcessedItemResult.FAILED
+                && i.getReceivedAt() != null).map(IntegrationProcessedItem::getReceivedAt).min(Instant::compareTo);
     }
 }

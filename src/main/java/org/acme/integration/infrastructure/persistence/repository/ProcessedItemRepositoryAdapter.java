@@ -1,5 +1,6 @@
 package org.acme.integration.infrastructure.persistence.repository;
 
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -9,6 +10,8 @@ import org.acme.integration.domain.model.ProcessedItemResult;
 import org.acme.integration.infrastructure.persistence.entity.IntegrationProcessedItemEntity;
 import org.acme.integration.infrastructure.persistence.mapper.IntegrationPersistenceMapper;
 
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -34,5 +37,11 @@ public class ProcessedItemRepositoryAdapter implements ProcessedItemRepository {
         IntegrationProcessedItemEntity entity = mapper.toEntity(item);
         repository.persistAndFlush(entity);
         return mapper.toModel(entity);
+    }
+
+    @Override
+    public Optional<Instant> oldestFailed(UUID integrationId) {
+        return repository.find("integrationId = ?1 and result = ?2 and receivedAt is not null", Sort.by("receivedAt"), integrationId,
+                ProcessedItemResult.FAILED).firstResultOptional().map(IntegrationProcessedItemEntity::getReceivedAt);
     }
 }
