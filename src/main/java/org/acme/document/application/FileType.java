@@ -1,5 +1,8 @@
 package org.acme.document.application;
 
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -35,7 +38,19 @@ public final class FileType {
         if (startsWith(start, ZIP)) {
             return isWorkbook(file) ? Optional.of(XLSX) : Optional.empty();
         }
+        // XLS usa la cabecera OLE, igual que .doc y .msg: solo cuenta si se abre como planilla
+        if (startsWith(start, OLE)) {
+            return opensAsSpreadsheet(file) ? Optional.of(XLS) : Optional.empty();
+        }
         return detect(start);
+    }
+
+    private static boolean opensAsSpreadsheet(Path file) {
+        try (InputStream in = Files.newInputStream(file); Workbook ignored = WorkbookFactory.create(in)) {
+            return true;
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
     }
 
     private static boolean isWorkbook(Path file) {
@@ -60,11 +75,6 @@ public final class FileType {
         if (head.length >= 12 && startsWith(head, "RIFF".getBytes())
                 && Arrays.equals(Arrays.copyOfRange(head, 8, 12), "WEBP".getBytes())) {
             return Optional.of("image/webp");
-        }
-        // shortcut: XLS (Office 97-2003) se reconoce por la cabecera OLE, que también usan .doc y .msg;
-        // se acepta igual porque se sirve como descarga y con nosniff. Para distinguirlos haría falta Apache POI
-        if (startsWith(head, OLE)) {
-            return Optional.of(XLS);
         }
         return Optional.empty();
     }
