@@ -34,11 +34,12 @@ final class CardStatementPrompt {
                   "currency": "ARS" o "USD" según la columna,
                   "type": "PURCHASE | INSTALLMENT | REFUND | FEE | TAX | INTEREST | PAYMENT | ADJUSTMENT",
                   "cardLastFour": "últimos 4 de la tarjeta del movimiento, si se sabe",
-                  "reference": "número de cupón o comprobante"
+                  "reference": "número de cupón o comprobante",
+                  "category": "rubro del comercio: SUPERMARKET | RESTAURANTS | FUEL | TRANSPORT | HEALTH | EDUCATION | ENTERTAINMENT | TRAVEL | CLOTHING | HOME | TECHNOLOGY | SERVICES | SUBSCRIPTIONS | TAXES_FEES | OTHER"
               } ]
             }
             Reglas: incluí TODOS los movimientos (consumos, cuotas, pagos, impuestos, intereses, comisiones), no los totales
             ni subtotales como movimientos. Un movimiento en cuotas es INSTALLMENT. "SU PAGO" es PAYMENT y va negativo.
-            Impuestos (ej. sellos) son TAX. Si una fila tiene importe en las dos monedas, generá un movimiento por moneda.
+            Impuestos (ej. sellos) son TAX y su rubro TAXES_FEES; intereses y comisiones también son TAXES_FEES. Si una fila tiene importe en las dos monedas, generá un movimiento por moneda.
             Fechas tipo '29-Oct-26' o '29/10/2026' -> '2026-10-29'.""";
 }

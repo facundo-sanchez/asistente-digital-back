@@ -75,7 +75,8 @@ class StatementExtractionUseCaseTest {
         var manage = new ManageCardStatementUseCase(statements, cards,
                 new CardStatementDraftValidator(cards, statements, documents), new StatementObligations(new InMemoryObligationRepository()), clock);
         useCase = new StatementExtractionUseCase(cards, statements, transactions, manage,
-                new ExtractionReviews(extractions, documents, jobs, clock), json);
+                new ExtractionReviews(extractions, documents, jobs, clock), json, documentId -> java.util.Optional.empty(),
+                new NewTransactions(new InMemoryMerchantRuleRepository(), transactions));
     }
 
     @Test
@@ -110,6 +111,22 @@ class StatementExtractionUseCaseTest {
         assertEquals(ProcessingStatus.COMPLETED, document.getProcessingStatus());
         assertEquals(galicia, document.getServiceId());
         assertThrows(ServiceException.class, () -> useCase.confirm(ANA, id, confirmation(BbvaSamples.pdf().dueDate())), "ya revisada");
+    }
+
+    @Test
+    void elPdfDeUnResumenQueLlegoSinConsumosLeSumaLosMovimientos() {
+        CardStatementView emailOnly = useCase.confirm(ANA, extraction(BbvaSamples.pdf()), confirmation(BbvaSamples.pdf().dueDate()));
+        transactions.rows.clear(); // como el resumen que llegó por email: solo totales
+
+        UUID pdf = extraction(BbvaSamples.pdf());
+        assertTrue(useCase.review(ANA, pdf).warnings().getFirst().contains("se le suman"));
+        CardStatementView view = useCase.confirm(ANA, pdf, confirmation(BbvaSamples.pdf().dueDate()));
+
+        assertEquals(emailOnly.statement().getId(), view.statement().getId(), "no crea otro resumen");
+        assertEquals(8, transactions.rows.size());
+        assertTrue(transactions.rows.stream().allMatch(t -> t.getStatementId().equals(emailOnly.statement().getId())));
+        assertThrows(RuntimeException.class, () -> useCase.confirm(ANA, extraction(BbvaSamples.pdf()), confirmation(BbvaSamples.pdf().dueDate())),
+                "con movimientos ya es repetido (RN-016)");
     }
 
     @Test

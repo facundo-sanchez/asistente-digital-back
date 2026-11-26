@@ -12,20 +12,27 @@ import org.acme.document.domain.model.Document;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /** Lo común a todos los procesadores: preparar el archivo para la IA y validar su respuesta. */
 public final class AiInputs {
 
+    /** Los emails importados de Gmail que traen la factura en el cuerpo. */
+    public static final String TEXT = "text/plain";
+
     private AiInputs() {
     }
 
-    /** Excel → tabla de texto (cualquier formato de banco o empresa); PDF o imagen → el archivo tal cual. */
+    /** Excel → tabla de texto (cualquier formato de banco o empresa); texto (un email) → tal cual; PDF o imagen → el archivo. */
     public static DocumentInput read(FileStorage storage, Document document) {
         try (InputStream in = storage.open(document.getStorageKey())) {
             boolean spreadsheet = FileType.XLSX.equals(document.getMimeType()) || FileType.XLS.equals(document.getMimeType());
-            return spreadsheet
-                    ? DocumentInput.ofText(SpreadsheetText.toText(in))
+            if (spreadsheet) {
+                return DocumentInput.ofText(SpreadsheetText.toText(in));
+            }
+            return TEXT.equals(document.getMimeType())
+                    ? DocumentInput.ofText(new String(in.readAllBytes(), StandardCharsets.UTF_8))
                     : DocumentInput.ofFile(document.getMimeType(), in.readAllBytes());
         } catch (IOException | RuntimeException e) {
             throw new DocumentReadException(ReadFailure.UNREADABLE_FILE, "No se pudo abrir el archivo: " + e.getClass().getSimpleName(), e);

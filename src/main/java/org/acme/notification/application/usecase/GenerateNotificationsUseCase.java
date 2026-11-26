@@ -90,7 +90,7 @@ public class GenerateNotificationsUseCase {
                 if (settings.wants(channel, NotificationType.OBLIGATION_DUE_SOON) && !days.isEmpty() && daysLeft <= days.getLast()) {
                     int threshold = threshold(days, daysLeft);
                     created += add(channel, userId, NotificationType.OBLIGATION_DUE_SOON, "OBLIGATION_DUE:" + o.obligation().getId() + ":" + threshold,
-                            o.obligation().getId(), null, o.obligation().getTitle(), dueText(threshold) + amountText(o));
+                            o.obligation().getId(), null, null, o.obligation().getTitle(), dueText(threshold) + amountText(o));
                 }
             }
         }
@@ -114,19 +114,28 @@ public class GenerateNotificationsUseCase {
                 null, document.getId(), "La IA leyó " + title(document), "Revisá los datos y confirmalos para que queden registrados");
     }
 
+    /** Google ya no deja leer el correo: hay que volver a conectar la cuenta. */
+    public void integrationDisconnected(UUID userId, UUID integrationId, String account) {
+        String key = "INTEGRATION_DISCONNECTED:" + integrationId + ":" + Instant.now(clock).toEpochMilli();
+        NotificationSettings settings = preferences.settings(userId);
+        NotificationSettings.CHANNELS.stream().filter(c -> settings.wants(c, NotificationType.INTEGRATION_DISCONNECTED))
+                .forEach(c -> add(c, userId, NotificationType.INTEGRATION_DISCONNECTED, key, null, null, integrationId,
+                        "Volvé a conectar Gmail", "Ya no podemos leer las facturas de " + account + ". Entrá a Integraciones para reconectarlo"));
+    }
+
     /** En cada canal que tiene ese aviso activo. */
     private int everywhere(NotificationSettings settings, UUID userId, NotificationType type, String key, UUID obligationId, UUID documentId,
                            String title, String message) {
         return NotificationSettings.CHANNELS.stream().filter(c -> settings.wants(c, type))
-                .mapToInt(c -> add(c, userId, type, key, obligationId, documentId, title, message)).sum();
+                .mapToInt(c -> add(c, userId, type, key, obligationId, documentId, null, title, message)).sum();
     }
 
     private int add(NotificationChannel channel, UUID userId, NotificationType type, String key, UUID obligationId, UUID documentId,
-                    String title, String message) {
+                    UUID integrationId, String title, String message) {
         Instant now = Instant.now(clock);
         boolean web = channel == NotificationChannel.WEB;
         Notification notification = Notification.builder().userId(userId).notificationType(type).channel(channel)
-                .idempotencyKey(key + ":" + channel).obligationId(obligationId).documentId(documentId).title(title).message(message)
+                .idempotencyKey(key + ":" + channel).obligationId(obligationId).documentId(documentId).integrationId(integrationId).title(title).message(message)
                 .scheduledAt(now).sentAt(web ? now : null).status(web ? NotificationStatus.SENT : NotificationStatus.PENDING).build();
         return notifications.saveIfAbsent(notification) ? 1 : 0;
     }

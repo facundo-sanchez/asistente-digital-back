@@ -139,7 +139,9 @@ public class DocumentResource {
     public Response download(@PathParam("id") UUID id, @QueryParam("inline") boolean inline) {
         DocumentFile file = documentQuery.download(currentUser.id(), id);
         // RESTEasy envía el InputStream de a partes y lo cierra al terminar
-        return Response.ok(file.content(), file.mimeType())
+        // el texto se guarda en UTF-8; sin charset el navegador rompe los acentos
+        String type = file.mimeType().equals("text/plain") ? "text/plain; charset=UTF-8" : file.mimeType();
+        return Response.ok(file.content(), type)
                 .header("Content-Length", file.size())
                 .header("Content-Disposition", ContentDisposition.of(inline, file.filename()))
                 .header("X-Content-Type-Options", "nosniff")

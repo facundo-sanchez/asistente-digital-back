@@ -14,11 +14,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.acme.card.application.model.CardStatementView;
 import org.acme.card.application.port.output.CardTransactionRepository;
 import org.acme.card.application.usecase.ManageCardStatementUseCase;
 import org.acme.card.infrastructure.rest.dto.CardStatementRequest;
 import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
 import org.acme.card.infrastructure.rest.dto.CardTransactionResponse;
+import org.acme.card.infrastructure.export.StatementWorkbook;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
 import org.acme.domain.exceptions.NotFoundException;
 import org.acme.shared.infrastructure.security.CurrentUser;
@@ -80,6 +82,18 @@ public class CardStatementResource {
     public List<CardTransactionResponse> transactions(@PathParam("id") UUID id) {
         manageStatement.get(currentUser.id(), id);
         return transactionRepository.findForStatement(currentUser.id(), id).stream().map(mapper::toResponse).toList();
+    }
+
+    @GET
+    @Path("/{id}/export.xlsx")
+    @Produces(MediaType.WILDCARD)
+    @Operation(summary = "Resumen en Excel", description = "Hoja con los datos y totales y hoja con los movimientos")
+    public Response exportExcel(@PathParam("id") UUID id) {
+        CardStatementView view = manageStatement.get(currentUser.id(), id);
+        byte[] file = StatementWorkbook.build(view, transactionRepository.findForStatement(currentUser.id(), id));
+        String name = "resumen-" + (view.statement().getDueDate() == null ? id : view.statement().getDueDate()) + ".xlsx";
+        return Response.ok(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .header("Cache-Control", "private, no-store").header("Content-Disposition", "attachment; filename=\"" + name + "\"").build();
     }
 
     @PUT

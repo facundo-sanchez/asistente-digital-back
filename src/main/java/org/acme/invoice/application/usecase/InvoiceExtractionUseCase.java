@@ -15,6 +15,8 @@ import org.acme.invoice.application.model.InvoiceView;
 import org.acme.invoice.application.port.output.InvoiceRepository;
 import org.acme.invoice.domain.model.Invoice;
 import org.acme.invoice.domain.model.InvoiceSource;
+import org.acme.integration.application.model.EmailOrigin;
+import org.acme.integration.application.port.output.EmailOriginRepository;
 import org.acme.service.application.model.ServiceFilter;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.service.domain.model.CustomerReference;
@@ -45,24 +47,32 @@ public class InvoiceExtractionUseCase {
     private final InvoiceRepository invoices;
     private final RegisterInvoiceUseCase registerInvoice;
     private final ObjectMapper json;
+    private final EmailOriginRepository origins;
 
     @Inject
     public InvoiceExtractionUseCase(ExtractionReviews reviews, ServiceRepository services, InvoiceRepository invoices,
-                                    RegisterInvoiceUseCase registerInvoice, ObjectMapper json) {
+                                    RegisterInvoiceUseCase registerInvoice, ObjectMapper json, EmailOriginRepository origins) {
         this.reviews = reviews;
         this.services = services;
         this.invoices = invoices;
         this.registerInvoice = registerInvoice;
         this.json = json;
+        this.origins = origins;
     }
 
     public InvoiceReview review(UUID userId, UUID extractionId) {
         AiExtractionResult result = reviews.find(userId, extractionId, ExtractedInvoice.SCHEMA_VERSION);
         ExtractedInvoice invoice = parse(result);
-        Optional<Service> service = suggestService(userId, invoice);
+        Optional<EmailOrigin> origin = origins.findByDocument(result.getDocumentId());
+        // Si llegó por Gmail y ya se asoció a un servicio, ese manda
+        Optional<Service> service = origin.map(EmailOrigin::serviceId).flatMap(id -> services.findByIdForUser(userId, id))
+                .or(() -> suggestService(userId, invoice));
+        UUID providerId = origin.map(EmailOrigin::providerId).orElse(null);
         List<String> warnings = new ArrayList<>();
         if (service.isEmpty()) {
-            warnings.add("No encontramos el servicio de esta factura: elegilo o registralo.");
+            warnings.add(providerId != null
+                    ? "Te llegó por email de un proveedor que todavía no registraste como servicio: registralo y después confirmá."
+                    : "No encontramos el servicio de esta factura: elegilo o registralo.");
         }
         if (invoice.dueDate() == null) {
             warnings.add("No se leyó el vencimiento: completalo antes de confirmar.");
@@ -76,7 +86,7 @@ public class InvoiceExtractionUseCase {
         }
         UUID invoiceId = invoices.findByExtraction(userId, extractionId).map(Invoice::getId).orElse(null);
         return new InvoiceReview(result.getId(), result.getDocumentId(), result.getValidationStatus(), invoice,
-                service.map(Service::getId).orElse(null), warnings, invoiceId);
+                service.map(Service::getId).orElse(null), providerId, warnings, invoiceId);
     }
 
     @Transactional

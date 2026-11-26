@@ -7,6 +7,7 @@ import org.acme.domain.exceptions.NotFoundException;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.user.application.model.UpdateProfileCommand;
 import org.acme.user.application.port.output.UserRepository;
+import org.acme.user.domain.model.PaymentWallet;
 import org.acme.user.domain.model.User;
 
 import java.time.DateTimeException;
@@ -38,6 +39,13 @@ public class ProfileUseCase {
         user.setTimezone(command.timezone());
         user.setLocale(command.locale());
         user.setDefaultCurrency(command.defaultCurrency());
+        return users.save(user);
+    }
+
+    @Transactional
+    public User setPaymentWallet(UUID userId, PaymentWallet wallet) {
+        User user = get(userId);
+        user.setPaymentWallet(wallet);
         return users.save(user);
     }
 

@@ -47,7 +47,7 @@ public final class BbvaSamples {
 
     private static ExtractedTransaction tx(LocalDate date, String description, String merchant, Integer number, Integer total,
                                            String amount, String type, String cardLastFour) {
-        return new ExtractedTransaction(date, description, merchant, number, total, amount(amount), "ARS", type, cardLastFour, null);
+        return new ExtractedTransaction(date, description, merchant, number, total, amount(amount), "ARS", type, cardLastFour, null, null);
     }
 
     private static LocalDate date(int year, int month, int day) {

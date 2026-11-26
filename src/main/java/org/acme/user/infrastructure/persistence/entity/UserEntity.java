@@ -55,6 +55,10 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_wallet", length = 30)
+    private org.acme.user.domain.model.PaymentWallet paymentWallet;
+
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 

@@ -11,6 +11,7 @@ import org.acme.user.application.usecase.PasswordUseCase;
 import org.acme.user.application.usecase.ProfileUseCase;
 import org.acme.user.infrastructure.rest.dto.AuthResponse;
 import org.acme.user.infrastructure.rest.dto.ChangePasswordRequest;
+import org.acme.user.infrastructure.rest.dto.PaymentWalletRequest;
 import org.acme.user.infrastructure.rest.dto.UpdateProfileRequest;
 import org.acme.user.infrastructure.rest.dto.UserResponse;
 import org.acme.user.infrastructure.rest.mapper.UserRestMapper;
@@ -54,6 +55,13 @@ public class UserResource {
     @Operation(summary = "Actualizar el perfil")
     public UserResponse update(@Valid @NotNull UpdateProfileRequest request) {
         return mapper.toResponse(profile.update(currentUser.id(), mapper.toCommand(request)));
+    }
+
+    @PUT
+    @Path("/payment-wallet")
+    @Operation(summary = "Elegir la billetera para pagar facturas")
+    public UserResponse paymentWallet(@NotNull PaymentWalletRequest request) {
+        return mapper.toResponse(profile.setPaymentWallet(currentUser.id(), request.paymentWallet()));
     }
 
     @PUT

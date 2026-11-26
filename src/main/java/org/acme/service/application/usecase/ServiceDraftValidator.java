@@ -48,6 +48,7 @@ public class ServiceDraftValidator {
                 .name(draft.getName().trim())
                 .customerReference(blankToNull(draft.getCustomerReference()))
                 .notes(blankToNull(draft.getNotes()))
+                .paymentUrl(blankToNull(draft.getPaymentUrl()))
                 .metadata(draft.getMetadata() == null ? new HashMap<>() : draft.getMetadata())
                 .build();
     }

@@ -2,6 +2,7 @@ package org.acme.service.infrastructure.rest.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.acme.shared.domain.model.BillingFrequency;
 import org.acme.shared.domain.model.ServiceCategory;
@@ -34,6 +35,10 @@ public record ServiceRequest(
 
         @Size(max = 2000, message = "Las notas admiten hasta 2000 caracteres")
         String notes,
+
+        @Size(max = 500)
+        @Pattern(regexp = "\\s*(https://\\S+)?\\s*", message = "Ingresá un link que empiece con https://")
+        @Schema(description = "Página donde se pagan sus facturas", example = "https://www.camuzzigas.com.ar") String paymentUrl,
 
         @Schema(description = "Datos adicionales libres (opcional)")
         Map<String, Object> metadata

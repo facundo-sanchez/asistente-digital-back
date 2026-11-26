@@ -58,6 +58,9 @@ public class ServiceEntity {
     @Column(name = "notes")
     private String notes;
 
+    @Column(name = "payment_url", length = 500)
+    private String paymentUrl;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();

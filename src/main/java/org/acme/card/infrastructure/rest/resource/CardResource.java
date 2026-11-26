@@ -16,10 +16,14 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.acme.card.application.model.CardView;
+import org.acme.card.application.model.SpendingFilter;
+import org.acme.card.application.usecase.CardReportUseCase;
 import org.acme.card.application.usecase.ManageCardStatementUseCase;
 import org.acme.card.application.usecase.ManageCardUseCase;
 import org.acme.card.infrastructure.rest.dto.CardRequest;
 import org.acme.card.infrastructure.rest.dto.CardResponse;
+import org.acme.card.infrastructure.rest.dto.CardSpendingReportResponse;
+import org.acme.card.infrastructure.rest.dto.PendingInstallmentsResponse;
 import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
 import org.acme.card.infrastructure.rest.dto.CardStatusRequest;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
@@ -28,6 +32,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +50,9 @@ public class CardResource {
 
     @Inject
     ManageCardStatementUseCase manageStatement;
+
+    @Inject
+    CardReportUseCase report;
 
     @Inject
     CardRestMapper mapper;
@@ -97,5 +105,19 @@ public class CardResource {
 
     private CardResponse toResponse(CardView view) {
         return mapper.toResponse(view.card(), view.serviceName());
+    }
+
+    @GET
+    @Path("/report")
+    @Operation(summary = "Informe de consumos", description = "Meses de facturación from/to (yyyy-MM-dd); sin período, los últimos 6. Por moneda (RN-018)")
+    public CardSpendingReportResponse report(@QueryParam("from") LocalDate from, @QueryParam("to") LocalDate to, @QueryParam("cardId") UUID cardId) {
+        return mapper.toResponse(report.report(currentUser.id(), new SpendingFilter(from, to, cardId, null, null)));
+    }
+
+    @GET
+    @Path("/installments/pending")
+    @Operation(summary = "Cuotas pendientes", description = "Por compra: cuota actual, cuántas faltan y cuánto; total por moneda")
+    public PendingInstallmentsResponse pendingInstallments() {
+        return mapper.toResponse(report.pending(currentUser.id()));
     }
 }
