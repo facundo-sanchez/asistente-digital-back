@@ -3,6 +3,7 @@ package org.acme.obligation.infrastructure.rest.mapper;
 import org.acme.obligation.domain.model.Obligation;
 import org.acme.obligation.application.model.ObligationView;
 import org.acme.obligation.domain.model.ObligationSummary;
+import org.acme.shared.domain.model.ServiceCategory;
 import org.acme.obligation.domain.model.RecurringRule;
 import org.acme.obligation.infrastructure.rest.dto.ObligationRequest;
 import org.acme.obligation.infrastructure.rest.dto.ObligationResponse;
@@ -15,10 +16,10 @@ import org.mapstruct.*;
 public interface ObligationRestMapper {
 
     @Mapping(target = ".", source = "summary.obligation")
-    ObligationResponse toResponse(ObligationSummary summary, String serviceName);
+    ObligationResponse toResponse(ObligationSummary summary, String serviceName, ServiceCategory serviceCategory);
 
     default ObligationResponse toResponse(ObligationView view) {
-        return toResponse(view.summary(), view.serviceName());
+        return toResponse(view.summary(), view.serviceName(), view.serviceCategory());
     }
 
     @Mapping(target = "id", ignore = true)

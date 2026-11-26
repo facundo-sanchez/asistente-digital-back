@@ -3,6 +3,7 @@ package org.acme.service.application.usecase;
 import org.acme.service.application.model.ServiceFilter;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.service.domain.model.Service;
+import org.acme.shared.domain.model.ServiceCategory;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
@@ -31,6 +32,13 @@ public class InMemoryServiceRepository implements ServiceRepository {
         return Map.copyOf(rows.values().stream()
                 .filter(s -> s.getUserId().equals(userId) && serviceIds.contains(s.getId()))
                 .collect(Collectors.toMap(Service::getId, Service::getName)));
+    }
+
+    @Override
+    public Map<UUID, ServiceCategory> findCategories(UUID userId, Collection<UUID> serviceIds) {
+        return Map.copyOf(rows.values().stream()
+                .filter(s -> s.getUserId().equals(userId) && serviceIds.contains(s.getId()) && s.getCategory() != null)
+                .collect(Collectors.toMap(Service::getId, Service::getCategory)));
     }
 
     @Override

@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import org.acme.obligation.application.model.ObligationFilter;
 import org.acme.obligation.application.port.output.ObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
+import org.acme.obligation.domain.model.ObligationStatus;
 import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.obligation.infrastructure.persistence.entity.ObligationEntity;
 import org.acme.obligation.infrastructure.persistence.entity.ObligationViewEntity;
@@ -19,6 +20,7 @@ import org.acme.shared.infrastructure.persistence.LikePattern;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -105,5 +107,11 @@ public class ObligationRepositoryAdapter implements ObligationRepository {
         }
         return view.list("userId = ?1 and invoiceId in ?2", userId, invoiceIds).stream()
                 .collect(Collectors.toMap(ObligationViewEntity::getInvoiceId, mapper::toSummary));
+    }
+
+    @Override
+    public List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to) {
+        return view.list("userId = ?1 and dueDate >= ?2 and dueDate <= ?3 and status <> ?4", userId, from, to, ObligationStatus.CANCELLED)
+                .stream().map(mapper::toSummary).toList();
     }
 }

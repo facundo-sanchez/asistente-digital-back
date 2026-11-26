@@ -8,6 +8,7 @@ import org.acme.shared.application.model.PageResult;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +29,7 @@ public interface ObligationRepository {
 
     /** Vencimientos generados por esas facturas del usuario, por id de factura. */
     Map<UUID, ObligationSummary> findByInvoices(UUID userId, Collection<UUID> invoiceIds);
+
+    /** Los que vencen entre from y to (inclusive), sin los cancelados. */
+    List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to);
 }

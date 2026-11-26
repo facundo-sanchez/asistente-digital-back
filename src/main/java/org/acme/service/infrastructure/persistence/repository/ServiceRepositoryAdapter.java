@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import org.acme.service.application.model.ServiceFilter;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.service.domain.model.Service;
+import org.acme.shared.domain.model.ServiceCategory;
 import org.acme.service.infrastructure.persistence.entity.ServiceEntity;
 import org.acme.service.infrastructure.persistence.mapper.ServicePersistenceMapper;
 import org.acme.shared.application.model.PageQuery;
@@ -63,6 +64,15 @@ public class ServiceRepositoryAdapter implements ServiceRepository {
         }
         return repository.list("userId = ?1 and id in ?2", userId, serviceIds).stream()
                 .collect(Collectors.toMap(ServiceEntity::getId, ServiceEntity::getName));
+    }
+
+    @Override
+    public Map<UUID, ServiceCategory> findCategories(UUID userId, Collection<UUID> serviceIds) {
+        if (serviceIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.list("userId = ?1 and id in ?2", userId, serviceIds).stream()
+                .collect(Collectors.toMap(ServiceEntity::getId, ServiceEntity::getCategory));
     }
 
     @Override

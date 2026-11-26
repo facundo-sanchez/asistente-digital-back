@@ -3,6 +3,7 @@ package org.acme.obligation.infrastructure.rest.dto;
 import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.obligation.domain.model.ObligationStatus;
 import org.acme.obligation.domain.model.ObligationType;
+import org.acme.shared.domain.model.ServiceCategory;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ public record ObligationResponse(
         UUID id,
         UUID serviceId,
         @Schema(description = "Nombre del servicio asociado (null si no tiene)", example = "Luz casa") String serviceName,
+        @Schema(description = "Categoría del servicio (da su color en las listas)") ServiceCategory serviceCategory,
         UUID invoiceId,
         UUID assetId,
         UUID recurrenceId,

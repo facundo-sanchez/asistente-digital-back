@@ -9,6 +9,7 @@ import org.acme.obligation.application.port.output.ObligationRepository;
 import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.shared.application.SearchText;
+import org.acme.shared.domain.model.ServiceCategory;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
@@ -39,7 +40,8 @@ public class ObligationQueryUseCase {
         Set<UUID> serviceIds = result.content().stream().map(s -> s.obligation().getServiceId())
                 .filter(Objects::nonNull).collect(Collectors.toSet());
         Map<UUID, String> names = services.findNames(userId, serviceIds);
-        return result.map(summary -> new ObligationView(summary, serviceName(names, summary)));
+        Map<UUID, ServiceCategory> categories = services.findCategories(userId, serviceIds);
+        return result.map(summary -> new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary)));
     }
 
     /** Una obligación de otro usuario responde igual que una inexistente. */
@@ -48,12 +50,13 @@ public class ObligationQueryUseCase {
                 .orElseThrow(() -> new NotFoundException("obligación"));
         UUID serviceId = summary.obligation().getServiceId();
         Map<UUID, String> names = serviceId == null ? Map.of() : services.findNames(userId, Set.of(serviceId));
-        return new ObligationView(summary, serviceName(names, summary));
+        Map<UUID, ServiceCategory> categories = serviceId == null ? Map.of() : services.findCategories(userId, Set.of(serviceId));
+        return new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary));
     }
 
-    private static String serviceName(Map<UUID, String> names, ObligationSummary summary) {
-        // Los mapas inmutables no aceptan get(null)
+    /** El dato del servicio de la obligación (null si no tiene; los mapas inmutables no aceptan get(null)). */
+    private static <T> T serviceValue(Map<UUID, T> values, ObligationSummary summary) {
         UUID serviceId = summary.obligation().getServiceId();
-        return serviceId == null ? null : names.get(serviceId);
+        return serviceId == null ? null : values.get(serviceId);
     }
 }
