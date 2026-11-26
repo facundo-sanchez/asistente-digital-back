@@ -10,6 +10,7 @@ import org.acme.document.application.usecase.DocumentProcessingUseCase;
 import org.acme.document.application.usecase.ProcessingJobRunner;
 import org.acme.document.domain.model.Document;
 import org.acme.document.domain.model.DocumentProcessingJob;
+import org.acme.notification.application.usecase.GenerateNotificationsUseCase;
 import org.jboss.logging.Logger;
 
 import java.util.Optional;
@@ -34,6 +35,9 @@ public class ProcessingWorker {
     @Inject
     DocumentRepository documents;
 
+    @Inject
+    GenerateNotificationsUseCase notifications;
+
     @Scheduled(every = "{app.ai.poll-every:20s}", delayed = "20s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void run() {
         for (int i = 0; i < BATCH; i++) {
@@ -53,6 +57,7 @@ public class ProcessingWorker {
                     .orElseThrow(() -> new IllegalStateException("Sin procesador para " + document.getDocumentType()));
             processor.process(document, job.getId());
             runner.succeeded(job.getId());
+            notifyReady(document, job);
         } catch (DocumentReadException e) {
             runner.failed(job.getId(), e.failure().name(), e.getMessage(), e.retryable());
         } catch (IllegalStateException e) {
@@ -61,6 +66,15 @@ public class ProcessingWorker {
             // Sin el contenido del documento: solo el tipo de error
             LOG.errorf("Falló la lectura del documento %s: %s", job.getDocumentId(), e.getClass().getSimpleName());
             runner.failed(job.getId(), "INTERNAL", e.getClass().getSimpleName(), true);
+        }
+    }
+
+    /** Un aviso que no se pudo crear no deshace la lectura. */
+    private void notifyReady(Document document, DocumentProcessingJob job) {
+        try {
+            notifications.extractionReady(document, job.getId());
+        } catch (RuntimeException e) {
+            LOG.errorf("No se pudo crear el aviso de la lectura %s: %s", job.getId(), e.getClass().getSimpleName());
         }
     }
 }

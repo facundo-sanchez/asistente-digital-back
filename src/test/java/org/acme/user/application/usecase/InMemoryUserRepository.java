@@ -5,6 +5,7 @@ import org.acme.user.domain.model.User;
 
 import java.time.Clock;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,5 +61,10 @@ public class InMemoryUserRepository implements UserRepository {
         copy.setUpdatedAt(clock.instant());
         rows.put(copy.getId(), copy);
         return copy.toBuilder().build();
+    }
+
+    @Override
+    public List<User> findActive() {
+        return rows.values().stream().filter(User::isActive).map(u -> u.toBuilder().build()).toList();
     }
 }
