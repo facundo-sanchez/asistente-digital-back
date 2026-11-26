@@ -1,0 +1,68 @@
+# Toda la app en Docker, en tu compu, al lado del entorno de desarrollo (no choca con sus puertos):
+#   front   http://localhost:3001/asistente-digital
+#   backend http://localhost:8081/asistente-digital-back/api/v1
+# Base propia y vacía (no comparte datos con la de desarrollo). Los emails van al Mailpit de la compu (puerto 1025).
+# Uso, desde esta carpeta:  docker compose -f docker-compose.local.yml up -d --build
+
+name: asistente-local
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: asistente_digital
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d asistente_digital"]
+      interval: 5s
+      retries: 20
+
+  backend:
+    build: ..
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Las claves de Gemini, Google y Gmail salen del .env de desarrollo
+    env_file: ../.env
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/asistente_digital
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      FRONTEND_URL: http://localhost:3001/asistente-digital
+      EMAIL_DELIVERY: smtp
+      SMTP_HOST: host.docker.internal
+      SMTP_PORT: "1025"
+      JWT_PRIVATE_KEY_LOCATION: file:/run/secrets/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/run/secrets/jwt-public.pem
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - documents:/data/documentos
+      - ../src/main/resources/privateKey.pem:/run/secrets/jwt-private.pem:ro
+      - ../src/main/resources/publicKey.pem:/run/secrets/jwt-public.pem:ro
+    ports:
+      - "8081:8080"
+
+  front:
+    build:
+      context: ../../asistente-digital-front
+      args:
+        NEXT_PUBLIC_BASE_PATH: /asistente-digital
+        API_BACKEND: http://backend:8080/asistente-digital-back/api/v1
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Sin HTTPS en local: cookies sin Secure para poder iniciar sesión
+      COOKIE_SECURE: "false"
+    ports:
+      - "3001:3000"
+
+volumes:
+  db-data:
+  documents:
