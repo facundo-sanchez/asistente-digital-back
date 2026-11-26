@@ -61,4 +61,9 @@ public class CardStatementRepositoryAdapter implements CardStatementRepository {
                 .firstResultOptional()
                 .map(mapper::toModel);
     }
+
+    @Override
+    public Optional<CardStatement> findByExtraction(UUID userId, UUID extractionResultId) {
+        return repository.find("userId = ?1 and extractionResultId = ?2", userId, extractionResultId).firstResultOptional().map(mapper::toModel);
+    }
 }

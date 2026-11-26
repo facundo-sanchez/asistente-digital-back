@@ -11,7 +11,6 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ResponseFormat;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.acme.document.application.DocumentReadException;
 import org.acme.document.application.model.DocumentInput;
@@ -34,12 +33,14 @@ public class GeminiDocumentReader implements DocumentReader {
             No inventes datos: si un dato no figura en el documento, usá null.
             Importes como número con punto decimal (ej. 216050.90), sin separador de miles. Fechas como yyyy-MM-dd.""";
 
-    private final Instance<ChatModel> model;
+    // Inyección directa: la extensión de Gemini solo crea el modelo si alguien lo inyecta así.
+    // Es un proxy: se construye recién al primer uso, así que sin clave la app arranca igual
+    private final ChatModel model;
     private final Optional<String> apiKey;
     private final ObjectMapper json = new ObjectMapper();
 
     @Inject
-    public GeminiDocumentReader(Instance<ChatModel> model,
+    public GeminiDocumentReader(ChatModel model,
                                 @ConfigProperty(name = "quarkus.langchain4j.ai.gemini.api-key") Optional<String> apiKey) {
         this.model = model;
         this.apiKey = apiKey;
@@ -61,7 +62,7 @@ public class GeminiDocumentReader implements DocumentReader {
                 .build();
         String answer;
         try {
-            answer = model.get().chat(request).aiMessage().text();
+            answer = model.chat(request).aiMessage().text();
         } catch (RuntimeException e) {
             // Sin el contenido del documento en el mensaje: solo el tipo de error
             throw new DocumentReadException(ReadFailure.UNAVAILABLE, "Gemini no respondió: " + e.getClass().getSimpleName(), e);

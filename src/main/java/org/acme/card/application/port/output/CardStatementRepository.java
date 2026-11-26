@@ -23,4 +23,7 @@ public interface CardStatementRepository {
 
     /** El resumen que generó ese vencimiento (en pesos o en dólares). */
     Optional<CardStatement> findByObligation(UUID userId, UUID obligationId);
+
+    /** El resumen creado al confirmar esa propuesta de la IA. */
+    Optional<CardStatement> findByExtraction(UUID userId, UUID extractionResultId);
 }

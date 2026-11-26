@@ -14,9 +14,11 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.acme.card.application.port.output.CardTransactionRepository;
 import org.acme.card.application.usecase.ManageCardStatementUseCase;
 import org.acme.card.infrastructure.rest.dto.CardStatementRequest;
 import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
+import org.acme.card.infrastructure.rest.dto.CardTransactionResponse;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
 import org.acme.domain.exceptions.NotFoundException;
 import org.acme.shared.infrastructure.security.CurrentUser;
@@ -24,6 +26,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Resúmenes de tarjeta (CU-015). El dueño sale siempre del token. */
@@ -37,6 +40,9 @@ public class CardStatementResource {
 
     @Inject
     ManageCardStatementUseCase manageStatement;
+
+    @Inject
+    CardTransactionRepository transactionRepository;
 
     @Inject
     CardRestMapper mapper;
@@ -66,6 +72,14 @@ public class CardStatementResource {
     @Operation(summary = "Consultar un resumen", description = "404 si es de otro usuario")
     public CardStatementResponse get(@PathParam("id") UUID id) {
         return mapper.toResponse(manageStatement.get(currentUser.id(), id));
+    }
+
+    @GET
+    @Path("/{id}/transactions")
+    @Operation(summary = "Movimientos de un resumen", description = "Los cargados al confirmar la lectura con IA, por fecha")
+    public List<CardTransactionResponse> transactions(@PathParam("id") UUID id) {
+        manageStatement.get(currentUser.id(), id);
+        return transactionRepository.findForStatement(currentUser.id(), id).stream().map(mapper::toResponse).toList();
     }
 
     @PUT

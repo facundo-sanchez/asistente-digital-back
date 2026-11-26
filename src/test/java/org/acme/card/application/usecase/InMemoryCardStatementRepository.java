@@ -55,4 +55,9 @@ public class InMemoryCardStatementRepository implements CardStatementRepository 
                 .filter(s -> s.getUserId().equals(userId) && (obligationId.equals(s.getObligationId()) || obligationId.equals(s.getObligationUsdId())))
                 .findFirst();
     }
+
+    @Override
+    public Optional<CardStatement> findByExtraction(UUID userId, UUID extractionResultId) {
+        return rows.values().stream().filter(s -> s.getUserId().equals(userId) && extractionResultId.equals(s.getExtractionResultId())).findFirst();
+    }
 }

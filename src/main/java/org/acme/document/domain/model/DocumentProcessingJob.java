@@ -56,6 +56,12 @@ public class DocumentProcessingJob {
         completedAt = now;
     }
 
+    /** El usuario confirmó o descartó la propuesta: el trabajo terminó. */
+    public void complete(Instant now) {
+        status = ProcessingJobStatus.COMPLETED;
+        completedAt = now;
+    }
+
     /** Falló: se reintenta más tarde si se puede y quedan intentos; si no, queda DEAD. */
     public void fail(Instant now, String code, String message, boolean retryable) {
         errorCode = code;
