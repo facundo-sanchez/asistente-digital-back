@@ -1,5 +1,6 @@
 package org.acme.user.infrastructure.rest.dto;
 
+import org.acme.user.domain.model.PaymentWallet;
 import org.acme.user.domain.model.UserRole;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -18,5 +19,6 @@ public record UserResponse(
         @Schema(example = "es-AR") String locale,
         @Schema(example = "ARS") String defaultCurrency,
         UserRole role,
+        @Schema(description = "Billetera para pagar facturas (null: ninguna)") PaymentWallet paymentWallet,
         Instant createdAt
 ) {}

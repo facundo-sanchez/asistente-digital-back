@@ -31,6 +31,8 @@ public class Service {
     @Builder.Default
     private boolean active = true;
     private String notes;
+    /** Página donde se pagan sus facturas (https). */
+    private String paymentUrl;
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
     private Instant createdAt;

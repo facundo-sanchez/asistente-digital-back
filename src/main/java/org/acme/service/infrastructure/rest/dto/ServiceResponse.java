@@ -22,6 +22,7 @@ public record ServiceResponse(
         LocalDate endDate,
         boolean active,
         String notes,
+        String paymentUrl,
         Map<String, Object> metadata,
         Instant createdAt,
         Instant updatedAt

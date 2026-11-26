@@ -28,6 +28,8 @@ public class User {
     private UserRole role = UserRole.USER;
     @Builder.Default
     private boolean active = true;
+    /** Billetera para pagar facturas; null si no eligió ninguna. */
+    private PaymentWallet paymentWallet;
     private Instant lastLoginAt;
     private Instant createdAt;
     private Instant updatedAt;
