@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.acme.card.domain.model.SpendingCategory;
 import org.hibernate.annotations.Immutable;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,17 +42,31 @@ public class PendingInstallmentViewEntity {
     @Column(name = "category")
     private SpendingCategory category;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", columnDefinition = "char(3)")
     private String currency;
 
     @Column(name = "installment_amount", precision = 19, scale = 4)
     private BigDecimal installmentAmount;
 
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+
     @Column(name = "installment_number", columnDefinition = "smallint")
     private Integer installmentNumber;
 
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+
     @Column(name = "installment_total", columnDefinition = "smallint")
     private Integer installmentTotal;
+
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
 
     @Column(name = "remaining_installments", columnDefinition = "smallint")
     private Integer remainingInstallments;

@@ -59,6 +59,10 @@ public class ProviderEmailRuleEntity {
     @Column(name = "body_fields", nullable = false, columnDefinition = "jsonb")
     private Map<String, Map<String, String>> bodyFields = new HashMap<>();
 
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+
     @Column(name = "priority", nullable = false, columnDefinition = "smallint")
     private int priority;
 

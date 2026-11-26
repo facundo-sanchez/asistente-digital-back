@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.acme.payment.domain.model.PaymentMethod;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -31,6 +33,8 @@ public class PaymentEntity {
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency;
 

@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.acme.card.domain.model.CardTransactionType;
 import org.acme.card.domain.model.SpendingCategory;
 import org.hibernate.annotations.Immutable;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -57,6 +59,8 @@ public class CardSpendingViewEntity {
     @Column(name = "amount", precision = 19, scale = 4)
     private BigDecimal amount;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", columnDefinition = "char(3)")
     private String currency;
 }

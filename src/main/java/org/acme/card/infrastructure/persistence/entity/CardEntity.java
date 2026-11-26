@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.acme.card.domain.model.CardBrand;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -34,8 +36,16 @@ public class CardEntity {
     @Column(name = "brand", nullable = false, length = 30)
     private CardBrand brand;
 
+    // CHAR(4) en la base: sin esto Hibernate valida la columna como VARCHAR
+
+    @JdbcTypeCode(SqlTypes.CHAR)
+
     @Column(name = "last_four", columnDefinition = "char(4)")
     private String lastFour;
+
+    // CHAR(4) en la base: sin esto Hibernate valida la columna como VARCHAR
+
+    @JdbcTypeCode(SqlTypes.CHAR)
 
     @Column(name = "account_last_four", columnDefinition = "char(4)")
     private String accountLastFour;
@@ -46,8 +56,16 @@ public class CardEntity {
     @Column(name = "additional", nullable = false)
     private boolean additional;
 
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+
     @Column(name = "closing_day", columnDefinition = "smallint")
     private Integer closingDay;
+
+    // SMALLINT en la base: sin esto Hibernate valida la columna como INTEGER
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
 
     @Column(name = "due_day", columnDefinition = "smallint")
     private Integer dueDay;
@@ -55,6 +73,8 @@ public class CardEntity {
     @Column(name = "credit_limit", precision = 19, scale = 4)
     private BigDecimal creditLimit;
 
+    // CHAR(3) en la base: sin esto Hibernate valida la columna como VARCHAR
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency;
 
