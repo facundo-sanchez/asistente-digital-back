@@ -18,8 +18,11 @@ import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Adaptador de persistencia del puerto {@link ObligationRepository}. Escribe en obligations y lee de v_obligations. */
 @ApplicationScoped
@@ -93,5 +96,14 @@ public class ObligationRepositoryAdapter implements ObligationRepository {
     @Override
     public boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate) {
         return repository.count("recurrenceId = ?1 and dueDate = ?2", recurrenceId, dueDate) > 0;
+    }
+
+    @Override
+    public Map<UUID, ObligationSummary> findByInvoices(UUID userId, Collection<UUID> invoiceIds) {
+        if (invoiceIds.isEmpty()) {
+            return Map.of();
+        }
+        return view.list("userId = ?1 and invoiceId in ?2", userId, invoiceIds).stream()
+                .collect(Collectors.toMap(ObligationViewEntity::getInvoiceId, mapper::toSummary));
     }
 }
