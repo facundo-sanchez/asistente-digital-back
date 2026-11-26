@@ -3,6 +3,8 @@ package org.acme.notification.application.usecase;
 import org.acme.document.application.usecase.InMemoryDocumentRepository;
 import org.acme.document.domain.model.Document;
 import org.acme.notification.domain.model.Notification;
+import org.acme.notification.domain.model.NotificationChannel;
+import org.acme.notification.domain.model.NotificationPreference;
 import org.acme.notification.domain.model.NotificationType;
 import org.acme.obligation.application.usecase.InMemoryObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
@@ -30,6 +32,7 @@ class GenerateNotificationsUseCaseTest {
     private InMemoryObligationRepository obligations;
     private InMemoryDocumentRepository documents;
     private InMemoryUserRepository users;
+    private NotificationPreferencesUseCase preferences;
     private UUID ana;
 
     @BeforeEach
@@ -38,12 +41,13 @@ class GenerateNotificationsUseCaseTest {
         obligations = new InMemoryObligationRepository();
         documents = new InMemoryDocumentRepository();
         users = new InMemoryUserRepository(Clock.systemUTC());
+        preferences = new NotificationPreferencesUseCase(new InMemoryNotificationPreferenceRepository());
         ana = users.save(User.builder().email("ana@mail.com").name("Ana").timezone("America/Argentina/Buenos_Aires").build()).getId();
     }
 
     /** 12:00 UTC = 9:00 en Buenos Aires. */
     private GenerateNotificationsUseCase at(String instant) {
-        return new GenerateNotificationsUseCase(notifications, obligations, documents, users, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
+        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 
     @Test
@@ -55,14 +59,14 @@ class GenerateNotificationsUseCaseTest {
         documents.save(Document.builder().userId(ana).title("Póliza").originalFilename("p.pdf").expiresOn(LocalDate.of(2026, 12, 20)).build());
 
         GenerateNotificationsUseCase useCase = at("2026-11-26T12:00:00Z");
-        assertEquals(3, useCase.generate());
+        assertEquals(6, useCase.generate(), "en la app y por email");
         assertEquals(0, useCase.generate(), "la segunda corrida no repite");
 
         assertEquals(List.of("OBLIGATION_DUE:%s:3:WEB".formatted(idOf("Luz")), "OBLIGATION_OVERDUE:%s:WEB".formatted(overdue)),
-                notifications.rows.stream().filter(n -> n.getObligationId() != null).map(Notification::getIdempotencyKey).toList());
+                notifications.rows.stream().filter(n -> n.getObligationId() != null && n.getChannel() == NotificationChannel.WEB).map(Notification::getIdempotencyKey).toList());
         assertEquals("Vence en 3 días o menos · $ 40.000,00", message(NotificationType.OBLIGATION_DUE_SOON).replace(' ', ' '));
 
-        assertEquals(1, at("2026-11-28T12:00:00Z").generate(), "el día del vencimiento sale el umbral 0");
+        assertEquals(2, at("2026-11-28T12:00:00Z").generate(), "el día del vencimiento sale el umbral 0");
         assertEquals("Vence hoy · $ 40.000,00", notifications.rows.getLast().getMessage().replace(' ', ' '));
     }
 
@@ -70,7 +74,7 @@ class GenerateNotificationsUseCaseTest {
     void antesDeLas8DelUsuarioNoAvisa() {
         obligation("Luz", "40000", LocalDate.of(2026, 11, 26));
         assertEquals(0, at("2026-11-26T10:30:00Z").generate()); // 7:30 en Buenos Aires
-        assertEquals(1, at("2026-11-26T11:00:00Z").generate()); // 8:00
+        assertEquals(2, at("2026-11-26T11:00:00Z").generate()); // 8:00
     }
 
     @Test
@@ -86,6 +90,32 @@ class GenerateNotificationsUseCaseTest {
         query.markRead(ana, id);
         assertEquals(0, query.unreadCount(ana));
         assertEquals(1, query.list(ana, false, new PageQuery(0, 20)).totalElements());
+    }
+
+    @Test
+    void respetaLasPreferencias() {
+        preferences.replace(ana, List.of(
+                pref(NotificationChannel.EMAIL, NotificationType.OBLIGATION_DUE_SOON, false, List.of()),
+                pref(NotificationChannel.WEB, NotificationType.ALL, true, List.of(7, 1))));
+        obligation("Luz", "40000", LocalDate.of(2026, 11, 28)); // faltan 2 días
+
+        assertEquals(1, at("2026-11-26T12:00:00Z").generate());
+        Notification only = notifications.rows.getFirst();
+        assertEquals(NotificationChannel.WEB, only.getChannel());
+        assertTrue(only.getIdempotencyKey().endsWith(":7:WEB"), "con días 7 y 1, faltando 2 sale el de 7");
+    }
+
+    @Test
+    void lasPreferenciasCompletanLoQueFaltaConLosValoresPorDefecto() {
+        List<NotificationPreference> all = preferences.replace(ana, List.of(
+                pref(NotificationChannel.PUSH, NotificationType.ALL, true, List.of(1)))).preferences();
+        assertEquals(10, all.size(), "WEB y EMAIL: ALL más 4 tipos; PUSH se ignora");
+        assertFalse(preferences.settings(ana).wants(NotificationChannel.EMAIL, NotificationType.DOCUMENT_DETECTED));
+        assertEquals(List.of(0, 1, 3), preferences.settings(ana).days(NotificationChannel.EMAIL));
+    }
+
+    private NotificationPreference pref(NotificationChannel channel, NotificationType type, boolean enabled, List<Integer> days) {
+        return NotificationPreference.builder().channel(channel).notificationType(type).enabled(enabled).daysBefore(days).build();
     }
 
     private UUID obligation(String title, String amount, LocalDate due) {

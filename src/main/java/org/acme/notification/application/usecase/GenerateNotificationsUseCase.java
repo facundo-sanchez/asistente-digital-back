@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.acme.document.application.port.output.DocumentRepository;
 import org.acme.document.domain.model.Document;
+import org.acme.notification.application.model.NotificationSettings;
 import org.acme.notification.application.port.output.NotificationRepository;
 import org.acme.notification.domain.model.Notification;
 import org.acme.notification.domain.model.NotificationChannel;
@@ -29,15 +30,15 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Crea los avisos en la app (CU-007). Cada aviso tiene una clave única: correr la tarea varias veces no duplica nada.
- * Se avisa por umbral (7, 3, 1 y 0 días): si un día no corrió, al siguiente sale el umbral que corresponde.
+ * Crea los avisos (CU-007) en cada canal que el usuario tiene activo (RN-009). Cada aviso tiene una clave única: correr
+ * la tarea varias veces no duplica nada. Se avisa por umbral (ej. 7, 3, 1 y 0 días): si un día no corrió, al siguiente
+ * sale el umbral que corresponde. En la app el aviso queda enviado; por email queda pendiente para el envío diario.
  */
 @ApplicationScoped
 public class GenerateNotificationsUseCase {
 
     /** Hora local del usuario a partir de la cual se generan sus avisos del día. */
     static final int HOUR = 8;
-    static final List<Integer> DUE_DAYS = List.of(0, 1, 3, 7);
     static final List<Integer> DOCUMENT_DAYS = List.of(7, 30);
     /** Hasta cuántos días atrás se avisa un vencido que no se avisó (por si la tarea no corrió). */
     static final int OVERDUE_LOOKBACK = 7;
@@ -45,15 +46,17 @@ public class GenerateNotificationsUseCase {
     private static final Locale ES_AR = Locale.forLanguageTag("es-AR");
 
     private final NotificationRepository notifications;
+    private final NotificationPreferencesUseCase preferences;
     private final ObligationRepository obligations;
     private final DocumentRepository documents;
     private final UserRepository users;
     private final Clock clock;
 
     @Inject
-    public GenerateNotificationsUseCase(NotificationRepository notifications, ObligationRepository obligations, DocumentRepository documents,
-                                        UserRepository users, Clock clock) {
+    public GenerateNotificationsUseCase(NotificationRepository notifications, NotificationPreferencesUseCase preferences,
+                                        ObligationRepository obligations, DocumentRepository documents, UserRepository users, Clock clock) {
         this.notifications = notifications;
+        this.preferences = preferences;
         this.obligations = obligations;
         this.documents = documents;
         this.users = users;
@@ -73,24 +76,33 @@ public class GenerateNotificationsUseCase {
         }
         LocalDate today = now.toLocalDate();
         UUID userId = user.getId();
+        NotificationSettings settings = preferences.settings(userId);
+        int maxDays = NotificationSettings.CHANNELS.stream().flatMap(c -> settings.days(c).stream()).max(Integer::compare).orElse(0);
         int created = 0;
 
-        for (ObligationSummary o : obligations.findDueBetween(userId, today, today.plusDays(DUE_DAYS.getLast()))) {
-            if (unpaid(o)) {
-                int threshold = threshold(DUE_DAYS, ChronoUnit.DAYS.between(today, o.obligation().getDueDate()));
-                created += add(userId, NotificationType.OBLIGATION_DUE_SOON, "OBLIGATION_DUE:" + o.obligation().getId() + ":" + threshold,
-                        o.obligation().getId(), null, o.obligation().getTitle(), dueText(threshold) + amountText(o));
+        for (ObligationSummary o : obligations.findDueBetween(userId, today, today.plusDays(maxDays))) {
+            if (!unpaid(o)) {
+                continue;
+            }
+            long daysLeft = ChronoUnit.DAYS.between(today, o.obligation().getDueDate());
+            for (NotificationChannel channel : NotificationSettings.CHANNELS) {
+                List<Integer> days = settings.days(channel);
+                if (settings.wants(channel, NotificationType.OBLIGATION_DUE_SOON) && !days.isEmpty() && daysLeft <= days.getLast()) {
+                    int threshold = threshold(days, daysLeft);
+                    created += add(channel, userId, NotificationType.OBLIGATION_DUE_SOON, "OBLIGATION_DUE:" + o.obligation().getId() + ":" + threshold,
+                            o.obligation().getId(), null, o.obligation().getTitle(), dueText(threshold) + amountText(o));
+                }
             }
         }
         for (ObligationSummary o : obligations.findDueBetween(userId, today.minusDays(OVERDUE_LOOKBACK), today.minusDays(1))) {
             if (unpaid(o)) {
-                created += add(userId, NotificationType.OBLIGATION_OVERDUE, "OBLIGATION_OVERDUE:" + o.obligation().getId(),
+                created += everywhere(settings, userId, NotificationType.OBLIGATION_OVERDUE, "OBLIGATION_OVERDUE:" + o.obligation().getId(),
                         o.obligation().getId(), null, o.obligation().getTitle(), "Se venció y no está pago" + amountText(o));
             }
         }
         for (Document d : documents.findExpiringBetween(userId, today, today.plusDays(DOCUMENT_DAYS.getLast()))) {
             int threshold = threshold(DOCUMENT_DAYS, ChronoUnit.DAYS.between(today, d.getExpiresOn()));
-            created += add(userId, NotificationType.DOCUMENT_EXPIRING, "DOCUMENT_EXPIRING:" + d.getId() + ":" + threshold,
+            created += everywhere(settings, userId, NotificationType.DOCUMENT_EXPIRING, "DOCUMENT_EXPIRING:" + d.getId() + ":" + threshold,
                     null, d.getId(), title(d), "Vence en " + (threshold == 7 ? "menos de una semana" : "menos de un mes"));
         }
         return created;
@@ -98,19 +110,28 @@ public class GenerateNotificationsUseCase {
 
     /** Aviso al terminar la lectura con IA: la propuesta espera revisión. */
     public void extractionReady(Document document, UUID jobId) {
-        add(document.getUserId(), NotificationType.DOCUMENT_DETECTED, "EXTRACTION_READY:" + jobId, null, document.getId(),
-                "La IA leyó " + title(document), "Revisá los datos y confirmalos para que queden registrados");
+        everywhere(preferences.settings(document.getUserId()), document.getUserId(), NotificationType.DOCUMENT_DETECTED, "EXTRACTION_READY:" + jobId,
+                null, document.getId(), "La IA leyó " + title(document), "Revisá los datos y confirmalos para que queden registrados");
     }
 
-    private int add(UUID userId, NotificationType type, String key, UUID obligationId, UUID documentId, String title, String message) {
+    /** En cada canal que tiene ese aviso activo. */
+    private int everywhere(NotificationSettings settings, UUID userId, NotificationType type, String key, UUID obligationId, UUID documentId,
+                           String title, String message) {
+        return NotificationSettings.CHANNELS.stream().filter(c -> settings.wants(c, type))
+                .mapToInt(c -> add(c, userId, type, key, obligationId, documentId, title, message)).sum();
+    }
+
+    private int add(NotificationChannel channel, UUID userId, NotificationType type, String key, UUID obligationId, UUID documentId,
+                    String title, String message) {
         Instant now = Instant.now(clock);
-        Notification notification = Notification.builder().userId(userId).notificationType(type).channel(NotificationChannel.WEB)
-                .idempotencyKey(key + ":WEB").obligationId(obligationId).documentId(documentId)
-                .title(title).message(message).scheduledAt(now).sentAt(now).status(NotificationStatus.SENT).build();
+        boolean web = channel == NotificationChannel.WEB;
+        Notification notification = Notification.builder().userId(userId).notificationType(type).channel(channel)
+                .idempotencyKey(key + ":" + channel).obligationId(obligationId).documentId(documentId).title(title).message(message)
+                .scheduledAt(now).sentAt(web ? now : null).status(web ? NotificationStatus.SENT : NotificationStatus.PENDING).build();
         return notifications.saveIfAbsent(notification) ? 1 : 0;
     }
 
-    /** El umbral más chico que alcanza a daysLeft (ej. faltan 2 días → umbral 3). */
+    /** El umbral más chico que alcanza a daysLeft (ej. faltan 2 días → umbral 3). thresholds va de menor a mayor. */
     static int threshold(List<Integer> thresholds, long daysLeft) {
         return thresholds.stream().filter(t -> t >= daysLeft).findFirst().orElse(thresholds.getLast());
     }

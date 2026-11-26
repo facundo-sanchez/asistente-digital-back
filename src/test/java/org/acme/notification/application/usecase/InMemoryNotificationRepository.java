@@ -2,6 +2,8 @@ package org.acme.notification.application.usecase;
 
 import org.acme.notification.application.port.output.NotificationRepository;
 import org.acme.notification.domain.model.Notification;
+import org.acme.notification.domain.model.NotificationChannel;
+import org.acme.notification.domain.model.NotificationStatus;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
@@ -48,7 +50,7 @@ public class InMemoryNotificationRepository implements NotificationRepository {
     @Override
     public PageResult<Notification> findForUser(UUID userId, boolean unreadOnly, Instant since, PageQuery page) {
         List<Notification> found = rows.stream()
-                .filter(n -> n.getUserId().equals(userId) && !n.getCreatedAt().isBefore(since) && (!unreadOnly || !n.isRead()))
+                .filter(n -> n.getUserId().equals(userId) && n.getChannel() == NotificationChannel.WEB && !n.getCreatedAt().isBefore(since) && (!unreadOnly || !n.isRead()))
                 .sorted(Comparator.comparing(Notification::getCreatedAt).reversed()).toList();
         return new PageResult<>(found, page.page(), page.size(), found.size());
     }
@@ -63,5 +65,12 @@ public class InMemoryNotificationRepository implements NotificationRepository {
         List<Notification> unread = rows.stream().filter(n -> n.getUserId().equals(userId) && !n.isRead()).toList();
         unread.forEach(n -> n.markAsRead(now));
         return unread.size();
+    }
+
+    @Override
+    public List<Notification> findDueEmails(Instant now, int limit) {
+        return rows.stream().filter(n -> n.getChannel() == NotificationChannel.EMAIL && n.getStatus() == NotificationStatus.PENDING
+                        && !n.getScheduledAt().isAfter(now))
+                .sorted(Comparator.comparing(Notification::getScheduledAt)).limit(limit).map(n -> n.toBuilder().build()).toList();
     }
 }

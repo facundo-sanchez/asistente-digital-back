@@ -9,12 +9,14 @@ import jakarta.transaction.Transactional;
 import org.acme.notification.application.port.output.NotificationRepository;
 import org.acme.notification.domain.model.Notification;
 import org.acme.notification.domain.model.NotificationChannel;
+import org.acme.notification.domain.model.NotificationStatus;
 import org.acme.notification.infrastructure.persistence.entity.NotificationEntity;
 import org.acme.notification.infrastructure.persistence.mapper.NotificationPersistenceMapper;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -69,5 +71,12 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     @Transactional
     public int markAllRead(UUID userId, Instant now) {
         return repository.update("readAt = ?1 where userId = ?2 and channel = ?3 and readAt is null", now, userId, NotificationChannel.WEB);
+    }
+
+    @Override
+    public List<Notification> findDueEmails(Instant now, int limit) {
+        return repository.find("channel = ?1 and status = ?2 and scheduledAt <= ?3", Sort.by("scheduledAt"),
+                        NotificationChannel.EMAIL, NotificationStatus.PENDING, now)
+                .page(Page.ofSize(limit)).list().stream().map(mapper::toModel).toList();
     }
 }

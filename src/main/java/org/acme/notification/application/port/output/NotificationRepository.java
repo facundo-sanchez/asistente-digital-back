@@ -5,6 +5,7 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,4 +25,7 @@ public interface NotificationRepository {
 
     /** Marca leídos todos los avisos en la app del usuario. Devuelve cuántos cambió. */
     int markAllRead(UUID userId, Instant now);
+
+    /** Emails pendientes con scheduledAt ya cumplido, los más viejos primero. */
+    List<Notification> findDueEmails(Instant now, int limit);
 }
