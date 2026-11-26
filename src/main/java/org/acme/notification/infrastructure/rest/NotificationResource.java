@@ -16,7 +16,7 @@ import org.acme.notification.infrastructure.rest.dto.NotificationResponse;
 import org.acme.notification.infrastructure.rest.dto.UnreadCountResponse;
 import org.acme.notification.infrastructure.rest.mapper.NotificationRestMapper;
 import org.acme.shared.application.model.PageQuery;
-import org.acme.shared.application.model.PageResult;
+import org.acme.shared.infrastructure.rest.dto.PageResponse;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
@@ -43,10 +43,10 @@ public class NotificationResource {
 
     @GET
     @Operation(summary = "Avisos de los últimos 30 días", description = "Los más nuevos primero; unread=true solo los no leídos")
-    public PageResult<NotificationResponse> list(@QueryParam("unread") @DefaultValue("false") boolean unread,
+    public PageResponse<NotificationResponse> list(@QueryParam("unread") @DefaultValue("false") boolean unread,
                                                  @QueryParam("page") @DefaultValue("0") int page,
                                                  @QueryParam("size") @DefaultValue("20") int size) {
-        return notifications.list(currentUser.id(), unread, new PageQuery(page, size)).map(mapper::toResponse);
+        return PageResponse.from(notifications.list(currentUser.id(), unread, new PageQuery(page, size)), mapper::toResponse);
     }
 
     @GET
