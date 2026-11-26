@@ -79,7 +79,7 @@ public class UploadDocumentUseCase {
                         .mimeType(mimeType)
                         .fileSize(size)
                         .checksum(checksum)
-                        .source(DocumentSource.MANUAL)
+                        .source(command.source())
                         // La extracción con IA llega en el módulo 9
                         .processingStatus(ProcessingStatus.NOT_REQUIRED)
                         .build());
