@@ -10,6 +10,7 @@ import org.acme.shared.application.model.PageResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -18,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Repositorio en memoria. paid simula los pagos vigentes. El estado efectivo es el
@@ -63,6 +65,13 @@ public class InMemoryObligationRepository implements ObligationRepository {
     @Override
     public boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate) {
         return rows.values().stream().anyMatch(o -> recurrenceId.equals(o.getRecurrenceId()) && o.getDueDate().equals(dueDate));
+    }
+
+    @Override
+    public Map<UUID, ObligationSummary> findByInvoices(UUID userId, Collection<UUID> invoiceIds) {
+        return Map.copyOf(rows.values().stream()
+                .filter(o -> o.getUserId().equals(userId) && o.getInvoiceId() != null && invoiceIds.contains(o.getInvoiceId()))
+                .collect(Collectors.toMap(Obligation::getInvoiceId, this::summary)));
     }
 
     private ObligationSummary summary(Obligation obligation) {

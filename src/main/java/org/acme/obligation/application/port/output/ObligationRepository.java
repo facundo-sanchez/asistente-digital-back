@@ -7,6 +7,8 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +25,7 @@ public interface ObligationRepository {
 
     /** true si la regla ya generó el vencimiento de esa fecha. */
     boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate);
+
+    /** Vencimientos generados por esas facturas del usuario, por id de factura. */
+    Map<UUID, ObligationSummary> findByInvoices(UUID userId, Collection<UUID> invoiceIds);
 }

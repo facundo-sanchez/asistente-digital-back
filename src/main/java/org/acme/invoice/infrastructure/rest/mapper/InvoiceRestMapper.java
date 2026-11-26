@@ -1,5 +1,8 @@
 package org.acme.invoice.infrastructure.rest.mapper;
 
+import org.acme.invoice.application.model.InvoiceView;
+import org.acme.obligation.domain.model.EffectiveObligationStatus;
+import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.invoice.domain.model.Invoice;
 import org.acme.invoice.infrastructure.rest.dto.InvoiceRequest;
 import org.acme.invoice.infrastructure.rest.dto.InvoiceResponse;
@@ -9,10 +12,20 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
+import java.util.UUID;
+
 @Mapper(config = MapStructConfig.class)
 public interface InvoiceRestMapper {
 
-    InvoiceResponse toResponse(Invoice invoice);
+    @Mapping(target = ".", source = "invoice")
+    InvoiceResponse toResponse(Invoice invoice, String serviceName, UUID obligationId, EffectiveObligationStatus obligationStatus);
+
+    default InvoiceResponse toResponse(InvoiceView view) {
+        ObligationSummary obligation = view.obligation();
+        return toResponse(view.invoice(), view.serviceName(),
+                obligation == null ? null : obligation.obligation().getId(),
+                obligation == null ? null : obligation.effectiveStatus());
+    }
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
