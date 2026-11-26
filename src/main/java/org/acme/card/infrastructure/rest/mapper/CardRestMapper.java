@@ -10,12 +10,14 @@ public interface CardRestMapper {
 
     // ---------- Tarjetas ----------
 
-    CardResponse toResponse(Card card);
+    CardResponse toResponse(Card card, String serviceName);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
     @Mapping(target = "additional", source = "additional", defaultValue = "false")
-    @Mapping(target = "currency", source = "currency", defaultValue = "ARS")
+    @Mapping(target = "closingDay", ignore = true)
+    @Mapping(target = "dueDay", ignore = true)
+    @Mapping(target = "currency", constant = "ARS")
     @Mapping(target = "active", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
