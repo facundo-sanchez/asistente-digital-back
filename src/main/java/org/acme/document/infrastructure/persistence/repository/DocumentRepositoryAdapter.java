@@ -15,6 +15,8 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -75,5 +77,11 @@ public class DocumentRepositoryAdapter implements DocumentRepository {
         return repository.find("userId = ?1 and checksum = ?2 and deletedAt is null", userId, checksum)
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public List<Document> findExpiringBetween(UUID userId, LocalDate from, LocalDate to) {
+        return repository.list("userId = ?1 and deletedAt is null and expiresOn >= ?2 and expiresOn <= ?3", Sort.by("expiresOn"), userId, from, to)
+                .stream().map(mapper::toModel).toList();
     }
 }

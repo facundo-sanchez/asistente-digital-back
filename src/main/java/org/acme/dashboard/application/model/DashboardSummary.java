@@ -17,5 +17,7 @@ public record DashboardSummary(
         long withoutAmount,
         List<OverdueTotals> overdue,
         long dueSoon,
-        long activeServices
+        long activeServices,
+        List<PendingReview> toReview,
+        List<ExpiringDocument> expiringDocuments
 ) {}

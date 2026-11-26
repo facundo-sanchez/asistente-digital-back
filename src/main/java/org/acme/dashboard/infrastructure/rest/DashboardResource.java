@@ -6,6 +6,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import org.acme.dashboard.application.model.DashboardSpending;
 import org.acme.dashboard.application.model.DashboardSummary;
 import org.acme.dashboard.application.usecase.DashboardUseCase;
 import org.acme.shared.infrastructure.security.CurrentUser;
@@ -31,5 +32,12 @@ public class DashboardResource {
     @Operation(summary = "Resumen del Inicio", description = "Mes actual en la zona del usuario; importes por moneda (no se suman ni convierten)")
     public DashboardSummary summary() {
         return dashboard.summary(currentUser.id());
+    }
+
+    @GET
+    @Path("/spending")
+    @Operation(summary = "Pagado por mes y por categoría", description = "Últimos 6 meses por moneda (con ceros) y el mes actual por categoría del servicio")
+    public DashboardSpending spending() {
+        return dashboard.spending(currentUser.id());
     }
 }

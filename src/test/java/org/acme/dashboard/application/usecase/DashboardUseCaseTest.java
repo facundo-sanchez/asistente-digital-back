@@ -3,6 +3,12 @@ package org.acme.dashboard.application.usecase;
 import org.acme.dashboard.application.model.DashboardSummary;
 import org.acme.dashboard.application.model.MonthTotals;
 import org.acme.dashboard.application.model.OverdueTotals;
+import org.acme.dashboard.application.model.SpendingTotal;
+import org.acme.document.application.usecase.InMemoryDocumentRepository;
+import org.acme.document.application.usecase.InMemoryExtractionResultRepository;
+import org.acme.document.domain.model.AiExtractionResult;
+import org.acme.document.domain.model.Document;
+import org.acme.document.domain.model.ExtractionValidationStatus;
 import org.acme.obligation.application.usecase.InMemoryObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
 import org.acme.obligation.domain.model.ObligationStatus;
@@ -17,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +35,8 @@ class DashboardUseCaseTest {
 
     private InMemoryObligationRepository obligations;
     private InMemoryServiceRepository services;
+    private InMemoryDocumentRepository documents;
+    private InMemoryExtractionResultRepository extractions;
     private DashboardUseCase useCase;
     private UUID ana;
 
@@ -39,7 +48,9 @@ class DashboardUseCaseTest {
         Clock clock = Clock.fixed(Instant.parse("2026-12-01T02:00:00Z"), ZoneOffset.UTC);
         InMemoryUserRepository users = new InMemoryUserRepository(clock);
         ana = users.save(User.builder().email("ana@mail.com").name("Ana").timezone("America/Argentina/Buenos_Aires").build()).getId();
-        useCase = new DashboardUseCase(obligations, services, users, clock);
+        documents = new InMemoryDocumentRepository();
+        extractions = new InMemoryExtractionResultRepository();
+        useCase = new DashboardUseCase(obligations, services, users, documents, extractions, new EmptySpendingRepository(), clock);
     }
 
     @Test
@@ -74,6 +85,34 @@ class DashboardUseCaseTest {
                 DashboardUseCase.overdueTotals(obligations.findDueBetween(ana, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31))));
         assertEquals(1, useCase.summary(ana).activeServices());
         assertEquals(0, useCase.summary(UUID.randomUUID()).activeServices(), "otro usuario no ve nada");
+    }
+
+    @Test
+    void paraRevisarYDocumentosQueVencenEn30Dias() {
+        UUID statement = documents.save(Document.builder().userId(ana).originalFilename("bbva.pdf").build()).getId();
+        extractions.save(AiExtractionResult.builder().userId(ana).documentId(statement).schemaVersion("card_statement/1").build());
+        extractions.save(AiExtractionResult.builder().userId(ana).documentId(statement).schemaVersion("card_statement/1")
+                .validationStatus(ExtractionValidationStatus.CONFIRMED).build());
+        documents.save(Document.builder().userId(ana).title("Póliza").originalFilename("p.pdf").expiresOn(LocalDate.of(2026, 12, 30)).build());
+        documents.save(Document.builder().userId(ana).title("Garantía").originalFilename("g.pdf").expiresOn(LocalDate.of(2026, 12, 31)).build());
+
+        DashboardSummary summary = useCase.summary(ana); // hoy es 30/11 en Buenos Aires
+
+        assertEquals(1, summary.toReview().size());
+        assertEquals("bbva.pdf", summary.toReview().get(0).documentTitle());
+        assertEquals(List.of("Póliza"), summary.expiringDocuments().stream().map(d -> d.title()).toList());
+        assertTrue(useCase.summary(UUID.randomUUID()).toReview().isEmpty(), "otro usuario no ve nada");
+    }
+
+    @Test
+    void losMesesSinPagosVanEnCero() {
+        List<SpendingTotal> months = DashboardUseCase.fillMonths(List.of(new SpendingTotal("2026-10", "USD", BigDecimal.TEN)),
+                YearMonth.of(2026, 9), YearMonth.of(2026, 11));
+
+        assertEquals(List.of(
+                new SpendingTotal("2026-09", "ARS", BigDecimal.ZERO), new SpendingTotal("2026-10", "ARS", BigDecimal.ZERO),
+                new SpendingTotal("2026-11", "ARS", BigDecimal.ZERO), new SpendingTotal("2026-09", "USD", BigDecimal.ZERO),
+                new SpendingTotal("2026-10", "USD", BigDecimal.TEN), new SpendingTotal("2026-11", "USD", BigDecimal.ZERO)), months);
     }
 
     private UUID obligation(UUID userId, String amount, String currency, LocalDate due) {

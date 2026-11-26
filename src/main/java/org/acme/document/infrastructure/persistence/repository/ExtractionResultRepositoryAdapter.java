@@ -5,9 +5,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.acme.document.application.port.output.ExtractionResultRepository;
 import org.acme.document.domain.model.AiExtractionResult;
+import org.acme.document.domain.model.ExtractionValidationStatus;
 import org.acme.document.infrastructure.persistence.entity.AiExtractionResultEntity;
 import org.acme.document.infrastructure.persistence.mapper.DocumentPersistenceMapper;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,5 +45,11 @@ public class ExtractionResultRepositoryAdapter implements ExtractionResultReposi
         return repository.find("userId = ?1 and documentId = ?2", Sort.descending("createdAt"), userId, documentId)
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public List<AiExtractionResult> findPending(UUID userId) {
+        return repository.list("userId = ?1 and validationStatus = ?2", Sort.by("createdAt"), userId, ExtractionValidationStatus.PENDING)
+                .stream().map(mapper::toModel).toList();
     }
 }

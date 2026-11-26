@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,5 +62,12 @@ public class InMemoryDocumentRepository implements DocumentRepository {
 
     private static boolean contains(String value, String text) {
         return value != null && value.toLowerCase(Locale.ROOT).contains(text.toLowerCase(Locale.ROOT));
+    }
+
+    @Override
+    public List<Document> findExpiringBetween(UUID userId, LocalDate from, LocalDate to) {
+        return rows.stream().filter(d -> d.getUserId().equals(userId) && !d.isDeleted() && d.getExpiresOn() != null
+                        && !d.getExpiresOn().isBefore(from) && !d.getExpiresOn().isAfter(to))
+                .sorted(Comparator.comparing(Document::getExpiresOn)).toList();
     }
 }
