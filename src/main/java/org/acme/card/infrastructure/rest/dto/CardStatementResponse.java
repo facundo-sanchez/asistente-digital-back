@@ -2,6 +2,7 @@ package org.acme.card.infrastructure.rest.dto;
 
 import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardStatementStatus;
+import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -13,10 +14,13 @@ import java.util.UUID;
 public record CardStatementResponse(
         UUID id,
         UUID cardId,
+        @Schema(description = "Nombre de la tarjeta", example = "Visa Galicia") String cardName,
         UUID documentId,
         UUID extractionResultId,
         @Schema(description = "Obligación de pago en moneda local") UUID obligationId,
+        @Schema(description = "Estado del vencimiento en pesos") EffectiveObligationStatus obligationStatus,
         @Schema(description = "Obligación de pago en dólares") UUID obligationUsdId,
+        @Schema(description = "Estado del vencimiento en dólares") EffectiveObligationStatus obligationUsdStatus,
         LocalDate periodStart,
         LocalDate closingDate,
         LocalDate dueDate,

@@ -58,9 +58,10 @@ public class CardStatement {
         confirmedAt = now;
     }
 
+    /** Rechazar una propuesta o anular un resumen confirmado. Queda en el historial. */
     public void reject() {
-        if (status == CardStatementStatus.CONFIRMED) {
-            throw new ServiceException("No se puede rechazar un resumen confirmado");
+        if (status == CardStatementStatus.REJECTED) {
+            throw new ServiceException("El resumen ya está anulado");
         }
         status = CardStatementStatus.REJECTED;
     }

@@ -16,9 +16,11 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.acme.card.application.model.CardView;
+import org.acme.card.application.usecase.ManageCardStatementUseCase;
 import org.acme.card.application.usecase.ManageCardUseCase;
 import org.acme.card.infrastructure.rest.dto.CardRequest;
 import org.acme.card.infrastructure.rest.dto.CardResponse;
+import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
 import org.acme.card.infrastructure.rest.dto.CardStatusRequest;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
 import org.acme.shared.infrastructure.security.CurrentUser;
@@ -42,6 +44,9 @@ public class CardResource {
     ManageCardUseCase manageCard;
 
     @Inject
+    ManageCardStatementUseCase manageStatement;
+
+    @Inject
     CardRestMapper mapper;
 
     @Inject
@@ -58,6 +63,13 @@ public class CardResource {
     @Operation(summary = "Consultar una tarjeta", description = "404 si es de otro usuario")
     public CardResponse get(@PathParam("id") UUID id) {
         return toResponse(manageCard.get(currentUser.id(), id));
+    }
+
+    @GET
+    @Path("/{id}/statements")
+    @Operation(summary = "Resúmenes de una tarjeta", description = "Anulados incluidos, más nuevos primero")
+    public List<CardStatementResponse> statements(@PathParam("id") UUID id) {
+        return manageStatement.listForCard(currentUser.id(), id).stream().map(mapper::toResponse).toList();
     }
 
     @POST

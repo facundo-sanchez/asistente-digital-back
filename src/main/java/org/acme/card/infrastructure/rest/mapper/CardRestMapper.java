@@ -1,6 +1,8 @@
 package org.acme.card.infrastructure.rest.mapper;
 
+import org.acme.card.application.model.CardStatementView;
 import org.acme.card.domain.model.*;
+import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.card.infrastructure.rest.dto.*;
 import org.acme.shared.infrastructure.mapper.MapStructConfig;
 import org.mapstruct.*;
@@ -28,7 +30,15 @@ public interface CardRestMapper {
 
     // ---------- Resúmenes ----------
 
-    CardStatementResponse toResponse(CardStatement statement);
+    @Mapping(target = ".", source = "statement")
+    CardStatementResponse toResponse(CardStatement statement, String cardName,
+                                     EffectiveObligationStatus obligationStatus, EffectiveObligationStatus obligationUsdStatus);
+
+    default CardStatementResponse toResponse(CardStatementView view) {
+        return toResponse(view.statement(), view.cardName(),
+                view.local() == null ? null : view.local().effectiveStatus(),
+                view.usd() == null ? null : view.usd().effectiveStatus());
+    }
 
     /** currency la toma el caso de uso de la tarjeta; status/source/obligaciones también. */
     @Mapping(target = "id", ignore = true)
