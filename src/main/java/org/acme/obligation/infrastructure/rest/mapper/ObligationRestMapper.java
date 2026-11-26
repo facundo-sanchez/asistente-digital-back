@@ -1,6 +1,7 @@
 package org.acme.obligation.infrastructure.rest.mapper;
 
 import org.acme.obligation.domain.model.Obligation;
+import org.acme.obligation.application.model.ObligationView;
 import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.obligation.domain.model.RecurringRule;
 import org.acme.obligation.infrastructure.rest.dto.ObligationRequest;
@@ -13,8 +14,12 @@ import org.mapstruct.*;
 @Mapper(config = MapStructConfig.class)
 public interface ObligationRestMapper {
 
-    @Mapping(target = ".", source = "obligation")
-    ObligationResponse toResponse(ObligationSummary summary);
+    @Mapping(target = ".", source = "summary.obligation")
+    ObligationResponse toResponse(ObligationSummary summary, String serviceName);
+
+    default ObligationResponse toResponse(ObligationView view) {
+        return toResponse(view.summary(), view.serviceName());
+    }
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
@@ -32,17 +37,17 @@ public interface ObligationRestMapper {
     @InheritConfiguration(name = "toModel")
     void update(ObligationRequest request, @MappingTarget Obligation obligation);
 
+    @Mapping(target = "amount", source = "estimatedAmount")
     RecurringRuleResponse toResponse(RecurringRule rule);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "assetId", ignore = true)
+    @Mapping(target = "dayOfMonth", ignore = true)
+    @Mapping(target = "estimatedAmount", source = "amount")
     @Mapping(target = "origin", ignore = true)
-    @Mapping(target = "active", source = "active", defaultValue = "true")
+    @Mapping(target = "active", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     RecurringRule toModel(RecurringRuleRequest request);
-
-    @InheritConfiguration(name = "toModel")
-    @Mapping(target = "active", source = "active", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void update(RecurringRuleRequest request, @MappingTarget RecurringRule rule);
 }

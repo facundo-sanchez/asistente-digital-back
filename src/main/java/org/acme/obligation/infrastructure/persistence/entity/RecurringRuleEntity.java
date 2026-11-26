@@ -3,6 +3,7 @@ package org.acme.obligation.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.acme.obligation.domain.model.ObligationType;
 import org.acme.obligation.domain.model.RecurrenceOrigin;
 import org.acme.shared.domain.model.BillingFrequency;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,6 +35,10 @@ public class RecurringRuleEntity {
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "obligation_type", nullable = false, length = 50)
+    private ObligationType obligationType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "frequency", nullable = false, length = 30)

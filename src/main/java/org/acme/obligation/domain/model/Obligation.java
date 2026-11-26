@@ -38,6 +38,28 @@ public class Obligation {
     private Instant createdAt;
     private Instant updatedAt;
 
+    /**
+     * Estado según lo pagado (pagos vigentes): nada → PENDING; todo o más, o sin importe → PAID;
+     * si no, PARTIALLY_PAID. Lo usan el registro y la anulación de pagos.
+     */
+    public void applyPaidAmount(BigDecimal paid, Instant now) {
+        if (status == ObligationStatus.CANCELLED) {
+            throw new ServiceException("La obligación está cancelada");
+        }
+        if (paid.signum() <= 0) {
+            status = ObligationStatus.PENDING;
+            paidAt = null;
+        } else if (amount == null || paid.compareTo(amount) >= 0) {
+            if (status != ObligationStatus.PAID) {
+                paidAt = now;
+            }
+            status = ObligationStatus.PAID;
+        } else {
+            status = ObligationStatus.PARTIALLY_PAID;
+            paidAt = null;
+        }
+    }
+
     public void cancel(String reason, Instant now) {
         if (status == ObligationStatus.PAID) {
             throw new ServiceException("No se puede cancelar una obligación pagada");

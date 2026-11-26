@@ -1,5 +1,6 @@
 package org.acme.obligation.infrastructure.rest.dto;
 
+import org.acme.obligation.domain.model.ObligationType;
 import org.acme.obligation.domain.model.RecurrenceOrigin;
 import org.acme.shared.domain.model.BillingFrequency;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -13,13 +14,13 @@ import java.util.UUID;
 public record RecurringRuleResponse(
         UUID id,
         UUID serviceId,
-        UUID assetId,
-        @Schema(example = "Luz mensual") String title,
+        @Schema(example = "Alquiler depto") String title,
+        ObligationType obligationType,
         BillingFrequency frequency,
-        Integer dayOfMonth,
-        LocalDate nextExpectedDate,
-        BigDecimal estimatedAmount,
-        String currency,
+        @Schema(description = "Día del mes en que vence (null si es semanal)", example = "10") Integer dayOfMonth,
+        @Schema(description = "Vencimiento del próximo período que todavía no se generó") LocalDate nextExpectedDate,
+        @Schema(example = "350000") BigDecimal amount,
+        @Schema(example = "ARS") String currency,
         RecurrenceOrigin origin,
         boolean active,
         Instant createdAt,
