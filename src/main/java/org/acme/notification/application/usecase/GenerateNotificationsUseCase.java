@@ -40,8 +40,8 @@ public class GenerateNotificationsUseCase {
     /** Hora local del usuario a partir de la cual se generan sus avisos del día. */
     static final int HOUR = 8;
     static final List<Integer> DOCUMENT_DAYS = List.of(7, 30);
-    /** Hasta cuántos días atrás se avisa un vencido que no se avisó (por si la tarea no corrió). */
-    static final int OVERDUE_LOOKBACK = 7;
+    /** Cualquier vencido sin pagar se avisa una vez; el año es solo un tope para la consulta. */
+    static final int OVERDUE_LOOKBACK = 365;
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("America/Argentina/Buenos_Aires");
     private static final Locale ES_AR = Locale.forLanguageTag("es-AR");
 
