@@ -9,6 +9,7 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -57,6 +58,11 @@ public class InMemoryObligationRepository implements ObligationRepository {
         int from = Math.min(page.page() * page.size(), matches.size());
         int to = Math.min(from + page.size(), matches.size());
         return new PageResult<>(matches.subList(from, to), page.page(), page.size(), matches.size());
+    }
+
+    @Override
+    public boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate) {
+        return rows.values().stream().anyMatch(o -> recurrenceId.equals(o.getRecurrenceId()) && o.getDueDate().equals(dueDate));
     }
 
     private ObligationSummary summary(Obligation obligation) {

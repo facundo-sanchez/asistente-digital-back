@@ -7,6 +7,7 @@ import org.acme.obligation.domain.model.Obligation;
 import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.service.domain.model.Service;
 
+import java.math.BigDecimal;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,17 +30,22 @@ public class ObligationDraftValidator {
 
     /** Valida el borrador y devuelve el nombre de su servicio (null si no tiene). */
     public String validate(UUID userId, Obligation draft) {
-        if ((draft.getAmount() == null) != (draft.getCurrency() == null)) {
+        return validate(userId, draft.getServiceId(), draft.getAmount(), draft.getCurrency());
+    }
+
+    /** Lo mismo para una regla de recurrencia: servicio del usuario, importe y moneda (ARS o USD) juntos. */
+    public String validate(UUID userId, UUID serviceId, BigDecimal amount, String currency) {
+        if ((amount == null) != (currency == null)) {
             throw new ServiceException(AMOUNT_WITHOUT_CURRENCY);
         }
-        if (draft.getCurrency() != null && !CURRENCIES.contains(draft.getCurrency())) {
+        if (currency != null && !CURRENCIES.contains(currency)) {
             throw new ServiceException(INVALID_CURRENCY);
         }
-        if (draft.getServiceId() == null) {
+        if (serviceId == null) {
             return null;
         }
         // Un servicio de otro usuario responde igual que uno inexistente (RN-002)
-        return services.findByIdForUser(userId, draft.getServiceId())
+        return services.findByIdForUser(userId, serviceId)
                 .map(Service::getName)
                 .orElseThrow(() -> new ServiceException(UNKNOWN_SERVICE));
     }

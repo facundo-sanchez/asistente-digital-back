@@ -6,6 +6,7 @@ import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,7 @@ public interface ObligationRepository {
 
     /** Por vencimiento, las más próximas (y las vencidas) primero. */
     PageResult<ObligationSummary> findForUser(UUID userId, ObligationFilter filter, PageQuery page);
+
+    /** true si la regla ya generó el vencimiento de esa fecha. */
+    boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate);
 }

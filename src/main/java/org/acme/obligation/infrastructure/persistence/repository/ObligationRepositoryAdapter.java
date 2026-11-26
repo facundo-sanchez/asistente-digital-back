@@ -17,6 +17,7 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -87,5 +88,10 @@ public class ObligationRepositoryAdapter implements ObligationRepository {
         PanacheQuery<ObligationViewEntity> query = view.find(where.toString(), Sort.by("dueDate").and("title"), params)
                 .page(Page.of(page.page(), page.size()));
         return new PageResult<>(query.list().stream().map(mapper::toSummary).toList(), page.page(), page.size(), query.count());
+    }
+
+    @Override
+    public boolean existsForRecurrence(UUID recurrenceId, LocalDate dueDate) {
+        return repository.count("recurrenceId = ?1 and dueDate = ?2", recurrenceId, dueDate) > 0;
     }
 }

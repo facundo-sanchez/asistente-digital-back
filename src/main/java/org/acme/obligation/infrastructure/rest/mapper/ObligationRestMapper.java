@@ -37,17 +37,17 @@ public interface ObligationRestMapper {
     @InheritConfiguration(name = "toModel")
     void update(ObligationRequest request, @MappingTarget Obligation obligation);
 
+    @Mapping(target = "amount", source = "estimatedAmount")
     RecurringRuleResponse toResponse(RecurringRule rule);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "assetId", ignore = true)
+    @Mapping(target = "dayOfMonth", ignore = true)
+    @Mapping(target = "estimatedAmount", source = "amount")
     @Mapping(target = "origin", ignore = true)
-    @Mapping(target = "active", source = "active", defaultValue = "true")
+    @Mapping(target = "active", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     RecurringRule toModel(RecurringRuleRequest request);
-
-    @InheritConfiguration(name = "toModel")
-    @Mapping(target = "active", source = "active", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void update(RecurringRuleRequest request, @MappingTarget RecurringRule rule);
 }
