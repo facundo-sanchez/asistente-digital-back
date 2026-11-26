@@ -17,6 +17,7 @@ import org.acme.card.application.model.StatementReview;
 import org.acme.card.application.usecase.StatementExtractionUseCase;
 import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
+import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.domain.exceptions.NotFoundException;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -39,16 +40,20 @@ public class StatementExtractionResource {
     StatementExtractionUseCase extractions;
 
     @Inject
+    ExtractionReviews reviews;
+
+    @Inject
     CardRestMapper mapper;
 
     @Inject
     CurrentUser currentUser;
 
     @GET
-    @Operation(summary = "Última propuesta de un documento", description = "Devuelve su id; 404 si la IA todavía no lo leyó")
-    public Map<String, UUID> latestForDocument(@QueryParam("documentId") @NotNull(message = "Indicá el documento") UUID documentId) {
-        return extractions.latestForDocument(currentUser.id(), documentId)
-                .map(id -> Map.of("id", id))
+    @Operation(summary = "Última propuesta de un documento",
+            description = "Devuelve su id y su esquema (card_statement/1 o invoice/1); 404 si la IA todavía no lo leyó")
+    public Map<String, String> latestForDocument(@QueryParam("documentId") @NotNull(message = "Indicá el documento") UUID documentId) {
+        return reviews.latestForDocument(currentUser.id(), documentId)
+                .map(r -> Map.of("id", r.getId().toString(), "schemaVersion", r.getSchemaVersion()))
                 .orElseThrow(() -> new NotFoundException("propuesta"));
     }
 

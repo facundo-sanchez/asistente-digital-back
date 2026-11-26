@@ -45,7 +45,8 @@ public class RegisterInvoiceUseCase {
                 .id(null)
                 .userId(userId)
                 .status(InvoiceStatus.PENDING_VALIDATION)
-                .source(InvoiceSource.MANUAL)
+                // Manual salvo que venga de una propuesta de la IA (con su extractionResultId)
+                .source(draft.getSource() == null ? InvoiceSource.MANUAL : draft.getSource())
                 .build();
         invoice.confirm(Instant.now(clock));
         Invoice saved = invoices.save(invoice);

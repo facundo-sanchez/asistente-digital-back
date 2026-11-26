@@ -20,18 +20,12 @@ import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardTransaction;
 import org.acme.card.domain.model.CardTransactionType;
 import org.acme.card.domain.model.CategorySource;
-import org.acme.document.application.port.output.DocumentRepository;
-import org.acme.document.application.port.output.ExtractionResultRepository;
-import org.acme.document.application.port.output.ProcessingJobRepository;
+import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.document.domain.model.AiExtractionResult;
 import org.acme.document.domain.model.ExtractionValidationStatus;
-import org.acme.document.domain.model.ProcessingStatus;
-import org.acme.domain.exceptions.NotFoundException;
 import org.acme.domain.exceptions.ServiceException;
 
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -49,38 +43,30 @@ import java.util.UUID;
 @ApplicationScoped
 public class StatementExtractionUseCase {
 
-    static final String ALREADY_REVIEWED = "Esta propuesta ya fue revisada";
-    static final String NOT_A_STATEMENT = "La propuesta no es de un resumen de tarjeta";
     static final String DUE_DATE_REQUIRED = "Completá la fecha de vencimiento";
     static final String CARD_REQUIRED = "Elegí la tarjeta del resumen";
 
-    private final ExtractionResultRepository extractions;
     private final CardRepository cards;
     private final CardStatementRepository statements;
     private final CardTransactionRepository transactions;
     private final ManageCardStatementUseCase manageStatement;
-    private final DocumentRepository documents;
-    private final ProcessingJobRepository jobs;
+    private final ExtractionReviews reviews;
     private final ObjectMapper json;
-    private final Clock clock;
 
     @Inject
-    public StatementExtractionUseCase(ExtractionResultRepository extractions, CardRepository cards, CardStatementRepository statements,
+    public StatementExtractionUseCase(CardRepository cards, CardStatementRepository statements,
                                       CardTransactionRepository transactions, ManageCardStatementUseCase manageStatement,
-                                      DocumentRepository documents, ProcessingJobRepository jobs, ObjectMapper json, Clock clock) {
-        this.extractions = extractions;
+                                      ExtractionReviews reviews, ObjectMapper json) {
         this.cards = cards;
         this.statements = statements;
         this.transactions = transactions;
         this.manageStatement = manageStatement;
-        this.documents = documents;
-        this.jobs = jobs;
+        this.reviews = reviews;
         this.json = json;
-        this.clock = clock;
     }
 
     public StatementReview review(UUID userId, UUID extractionId) {
-        AiExtractionResult result = find(userId, extractionId);
+        AiExtractionResult result = reviews.find(userId, extractionId, ExtractedStatement.SCHEMA_VERSION);
         ExtractedStatement statement = parse(result);
         Optional<Card> card = suggestCard(userId, statement);
         List<String> warnings = new ArrayList<>(StatementChecks.warnings(statement));
@@ -96,14 +82,9 @@ public class StatementExtractionUseCase {
                 StatementChecks.sum(statement, false), StatementChecks.sum(statement, true), statementId);
     }
 
-    /** La última propuesta de un documento (para ir a revisarla desde el documento). */
-    public Optional<UUID> latestForDocument(UUID userId, UUID documentId) {
-        return extractions.findLatestForDocument(userId, documentId).map(AiExtractionResult::getId);
-    }
-
     @Transactional
     public CardStatementView confirm(UUID userId, UUID extractionId, StatementConfirmation confirmation) {
-        AiExtractionResult result = pending(userId, extractionId);
+        AiExtractionResult result = reviews.pending(userId, extractionId, ExtractedStatement.SCHEMA_VERSION);
         ExtractedStatement extracted = parse(result);
         if (confirmation.cardId() == null) {
             throw new ServiceException(CARD_REQUIRED);
@@ -133,37 +114,16 @@ public class StatementExtractionUseCase {
                 .flatMap(Optional::stream)
                 .toList());
 
-        result.setValidationStatus(changed(extracted, confirmation) ? ExtractionValidationStatus.CORRECTED : ExtractionValidationStatus.CONFIRMED);
-        close(userId, result, cards.findByIdForUser(userId, confirmation.cardId()).map(Card::getServiceId).orElse(null));
+        reviews.close(userId, result, changed(extracted, confirmation) ? ExtractionValidationStatus.CORRECTED : ExtractionValidationStatus.CONFIRMED,
+                cards.findByIdForUser(userId, confirmation.cardId()).map(Card::getServiceId).orElse(null));
         return view;
     }
 
     /** Descartar la propuesta: no se crea nada; el documento queda guardado. */
     @Transactional
     public void reject(UUID userId, UUID extractionId) {
-        AiExtractionResult result = pending(userId, extractionId);
-        result.setValidationStatus(ExtractionValidationStatus.REJECTED);
-        close(userId, result, null);
-    }
-
-    /** Marca la propuesta como revisada y cierra el trabajo; el documento queda asociado al servicio del banco. */
-    private void close(UUID userId, AiExtractionResult result, UUID serviceId) {
-        Instant now = Instant.now(clock);
-        result.setReviewedAt(now);
-        extractions.save(result);
-        if (result.getJobId() != null) {
-            jobs.findById(result.getJobId()).ifPresent(job -> {
-                job.complete(now);
-                jobs.save(job);
-            });
-        }
-        documents.findByIdForUser(userId, result.getDocumentId()).ifPresent(document -> {
-            document.setProcessingStatus(ProcessingStatus.COMPLETED);
-            if (document.getServiceId() == null) {
-                document.setServiceId(serviceId);
-            }
-            documents.save(document);
-        });
+        AiExtractionResult result = reviews.pending(userId, extractionId, ExtractedStatement.SCHEMA_VERSION);
+        reviews.close(userId, result, ExtractionValidationStatus.REJECTED, null);
     }
 
     /** La tarjeta del usuario cuyos últimos 4 (de tarjeta o de cuenta) figuran en el resumen. */
@@ -236,22 +196,7 @@ public class StatementExtractionUseCase {
     }
 
     private ExtractedStatement parse(AiExtractionResult result) {
-        if (!ExtractedStatement.SCHEMA_VERSION.equals(result.getSchemaVersion())) {
-            throw new ServiceException(NOT_A_STATEMENT);
-        }
         return json.convertValue(result.getExtractedData(), ExtractedStatement.class);
     }
 
-    private AiExtractionResult pending(UUID userId, UUID extractionId) {
-        AiExtractionResult result = find(userId, extractionId);
-        if (result.getValidationStatus() != ExtractionValidationStatus.PENDING) {
-            throw new ServiceException(ALREADY_REVIEWED);
-        }
-        return result;
-    }
-
-    /** Una propuesta de otro usuario responde igual que una inexistente. */
-    private AiExtractionResult find(UUID userId, UUID extractionId) {
-        return extractions.findByIdForUser(userId, extractionId).orElseThrow(() -> new NotFoundException("propuesta"));
-    }
 }

@@ -15,6 +15,7 @@ import org.acme.card.domain.model.CardBrand;
 import org.acme.card.domain.model.CardStatementSource;
 import org.acme.card.domain.model.CardTransaction;
 import org.acme.card.domain.model.CardTransactionType;
+import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.document.application.usecase.InMemoryDocumentRepository;
 import org.acme.document.application.usecase.InMemoryExtractionResultRepository;
 import org.acme.document.application.usecase.InMemoryProcessingJobRepository;
@@ -73,7 +74,8 @@ class StatementExtractionUseCaseTest {
         Clock clock = Clock.fixed(Instant.parse("2026-11-01T12:00:00Z"), ZoneOffset.UTC);
         var manage = new ManageCardStatementUseCase(statements, cards,
                 new CardStatementDraftValidator(cards, statements, documents), new StatementObligations(new InMemoryObligationRepository()), clock);
-        useCase = new StatementExtractionUseCase(extractions, cards, statements, transactions, manage, documents, jobs, json, clock);
+        useCase = new StatementExtractionUseCase(cards, statements, transactions, manage,
+                new ExtractionReviews(extractions, documents, jobs, clock), json);
     }
 
     @Test
