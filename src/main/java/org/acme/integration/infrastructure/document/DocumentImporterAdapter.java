@@ -2,6 +2,7 @@ package org.acme.integration.infrastructure.document;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.acme.document.application.model.UploadDocumentCommand;
 import org.acme.document.application.port.output.DocumentRepository;
 import org.acme.document.application.port.output.FileStorage;
@@ -52,6 +53,7 @@ public class DocumentImporterAdapter implements DocumentImporter {
 
     /** Las validaciones de la subida (tipos de archivo) no aplican: es texto que armamos nosotros. */
     @Override
+    @Transactional
     public UUID importText(UUID userId, String text, String filename, DocumentType type, UUID serviceId) {
         byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
         String checksum = sha256(bytes);

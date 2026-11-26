@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Trae de Gmail solo los emails de los remitentes de los proveedores (el resto ni se descarga), aplica la regla
@@ -55,6 +56,9 @@ public class GmailSyncUseCase {
     static final Duration OVERLAP = Duration.ofDays(1);
 
     private static final Logger LOG = Logger.getLogger(GmailSyncUseCase.class);
+
+    // shortcut: el candado vive en memoria; con varias instancias del backend habría que tomarlo en la base
+    private final Set<UUID> running = ConcurrentHashMap.newKeySet();
 
     private final GmailClient gmail;
     private final GmailAccess access;
@@ -101,7 +105,19 @@ public class GmailSyncUseCase {
         return sync(integration);
     }
 
+    /** Si la cuenta ya se está revisando (el botón mientras corre la tarea), no hace nada. */
     int sync(Integration integration) {
+        if (!running.add(integration.getId())) {
+            return 0;
+        }
+        try {
+            return syncUnlocked(integration);
+        } finally {
+            running.remove(integration.getId());
+        }
+    }
+
+    private int syncUnlocked(Integration integration) {
         Instant now = Instant.now(clock);
         String token;
         try {

@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.acme.integration.application.port.output.ProcessedItemRepository;
 import org.acme.integration.domain.model.IntegrationProcessedItem;
+import org.acme.integration.domain.model.ProcessedItemResult;
 import org.acme.integration.infrastructure.persistence.entity.IntegrationProcessedItemEntity;
 import org.acme.integration.infrastructure.persistence.mapper.IntegrationPersistenceMapper;
 
@@ -21,12 +22,15 @@ public class ProcessedItemRepositoryAdapter implements ProcessedItemRepository {
 
     @Override
     public boolean existsMessage(UUID integrationId, String externalMessageId) {
-        return repository.count("integrationId = ?1 and externalMessageId = ?2", integrationId, externalMessageId) > 0;
+        return repository.count("integrationId = ?1 and externalMessageId = ?2 and result <> ?3", integrationId, externalMessageId,
+                ProcessedItemResult.FAILED) > 0;
     }
 
     @Override
     @Transactional
     public IntegrationProcessedItem save(IntegrationProcessedItem item) {
+        repository.delete("integrationId = ?1 and externalMessageId = ?2 and externalAttachmentId = ?3 and result = ?4",
+                item.getIntegrationId(), item.getExternalMessageId(), item.getExternalAttachmentId(), ProcessedItemResult.FAILED);
         IntegrationProcessedItemEntity entity = mapper.toEntity(item);
         repository.persistAndFlush(entity);
         return mapper.toModel(entity);

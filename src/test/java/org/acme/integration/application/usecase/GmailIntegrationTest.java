@@ -94,6 +94,20 @@ class GmailIntegrationTest {
     }
 
     @Test
+    void loQueFallaSeReintentaEnLaProximaRevision() {
+        Integration account = connect.connect(ana, "c1", "v1", null);
+        gmail.inbox.put("m1", message("m1", "factura@factura.camuzzigas.com.ar", "Camuzzi te acerca tu factura", "Total: $ 1,00"));
+        importer.failNext = true;
+
+        assertEquals(0, sync.syncNow(ana, account.getId()));
+        assertEquals(ProcessedItemResult.FAILED, result("m1"));
+
+        assertEquals(1, sync.syncNow(ana, account.getId()));
+        assertEquals(ProcessedItemResult.IMPORTED, result("m1"));
+        assertEquals(1, processed.rows.size(), "el reintento reemplaza la fila que falló");
+    }
+
+    @Test
     void siGoogleRevocaElPermisoPideReconectar() {
         Integration account = connect.connect(ana, "c1", "v1", null);
         gmail.refreshRevoked = true;

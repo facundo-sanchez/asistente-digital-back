@@ -20,6 +20,8 @@ public class RecordingDocumentImporter implements DocumentImporter {
     public final List<String> imported = new ArrayList<>();
     public final List<UUID> services = new ArrayList<>();
     private final Set<String> contents = new HashSet<>();
+    /** La próxima importación falla (ej. la base no respondió). */
+    public boolean failNext;
 
     @Override
     public UUID importFile(UUID userId, Path file, String filename, DocumentType type, UUID serviceId) {
@@ -36,6 +38,10 @@ public class RecordingDocumentImporter implements DocumentImporter {
     }
 
     private UUID add(String content, String description, UUID serviceId) {
+        if (failNext) {
+            failNext = false;
+            throw new IllegalStateException("falla de prueba");
+        }
         if (!contents.add(content)) throw new ConflictException("duplicado");
         imported.add(description);
         services.add(serviceId);

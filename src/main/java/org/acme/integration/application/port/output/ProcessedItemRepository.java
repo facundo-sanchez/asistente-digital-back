@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface ProcessedItemRepository {
 
-    /** Si el mensaje ya se procesó (con cualquier resultado). */
+    /** Si el mensaje ya se procesó. Los que fallaron no cuentan: se vuelven a intentar. */
     boolean existsMessage(UUID integrationId, String externalMessageId);
 
     IntegrationProcessedItem save(IntegrationProcessedItem item);
