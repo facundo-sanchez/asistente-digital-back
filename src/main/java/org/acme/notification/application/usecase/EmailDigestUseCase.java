@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 /**
  * Manda por email los avisos pendientes, uno solo por usuario con todo lo que tiene (todos se generan en la misma
- * corrida de las 8, así que sale uno por día). Si el SMTP falla se reintenta: 2, 4, 8, 16 minutos y después FAILED.
+ * corrida de las 9, así que sale uno por día). Si el SMTP falla se reintenta: 2, 4, 8, 16 minutos y después FAILED.
  */
 @ApplicationScoped
 public class EmailDigestUseCase {

@@ -71,10 +71,10 @@ class GenerateNotificationsUseCaseTest {
     }
 
     @Test
-    void antesDeLas8DelUsuarioNoAvisa() {
+    void antesDeLas9DelUsuarioNoAvisa() {
         obligation("Luz", "40000", LocalDate.of(2026, 11, 26));
-        assertEquals(0, at("2026-11-26T10:30:00Z").generate()); // 7:30 en Buenos Aires
-        assertEquals(2, at("2026-11-26T11:00:00Z").generate()); // 8:00
+        assertEquals(0, at("2026-11-26T11:30:00Z").generate()); // 8:30 en Buenos Aires
+        assertEquals(2, at("2026-11-26T12:00:00Z").generate()); // 9:00
     }
 
     @Test

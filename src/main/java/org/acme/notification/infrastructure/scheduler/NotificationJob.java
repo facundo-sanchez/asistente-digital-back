@@ -6,7 +6,7 @@ import jakarta.inject.Inject;
 import org.acme.notification.application.usecase.GenerateNotificationsUseCase;
 import org.jboss.logging.Logger;
 
-/** Cada hora: a cada usuario le salen sus avisos cuando en su zona ya son las 8 (los repetidos no se crean). */
+/** Cada hora: a cada usuario le salen sus avisos cuando en su zona ya son las 9 (los repetidos no se crean). */
 @ApplicationScoped
 public class NotificationJob {
 

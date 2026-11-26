@@ -38,7 +38,7 @@ import java.util.UUID;
 public class GenerateNotificationsUseCase {
 
     /** Hora local del usuario a partir de la cual se generan sus avisos del día. */
-    static final int HOUR = 8;
+    static final int HOUR = 9;
     static final List<Integer> DOCUMENT_DAYS = List.of(7, 30);
     /** Cualquier vencido sin pagar se avisa una vez; el año es solo un tope para la consulta. */
     static final int OVERDUE_LOOKBACK = 365;
@@ -63,7 +63,7 @@ public class GenerateNotificationsUseCase {
         this.clock = clock;
     }
 
-    /** Para cada usuario activo al que ya le llegaron las 8 en su zona. Devuelve cuántos avisos creó. */
+    /** Para cada usuario activo al que ya le llegaron las 9 en su zona. Devuelve cuántos avisos creó. */
     public int generate() {
         // shortcut: recorre todos los usuarios activos; con miles, filtrar en la base por zona horaria
         return users.findActive().stream().mapToInt(this::generateFor).sum();
