@@ -8,6 +8,7 @@ import java.util.List;
  * los importes van por moneda, sin sumarse ni convertirse (RN-018).
  *
  * @param withoutAmount vencimientos del mes sin importe cargado (no entran en los totales)
+ * @param activity      lo último registrado (10 como mucho), lo más nuevo primero
  * @param dueSoon       cuántos vencen en los próximos 7 días
  */
 public record DashboardSummary(
@@ -19,5 +20,6 @@ public record DashboardSummary(
         long dueSoon,
         long activeServices,
         List<PendingReview> toReview,
-        List<ExpiringDocument> expiringDocuments
+        List<ExpiringDocument> expiringDocuments,
+        List<Activity> activity
 ) {}

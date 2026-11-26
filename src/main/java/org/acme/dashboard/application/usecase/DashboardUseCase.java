@@ -2,6 +2,7 @@ package org.acme.dashboard.application.usecase;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.acme.dashboard.application.model.Activity;
 import org.acme.dashboard.application.model.DashboardSpending;
 import org.acme.dashboard.application.model.DashboardSummary;
 import org.acme.dashboard.application.model.ExpiringDocument;
@@ -9,6 +10,7 @@ import org.acme.dashboard.application.model.MonthTotals;
 import org.acme.dashboard.application.model.OverdueTotals;
 import org.acme.dashboard.application.model.PendingReview;
 import org.acme.dashboard.application.model.SpendingTotal;
+import org.acme.dashboard.application.port.output.ActivityRepository;
 import org.acme.dashboard.application.port.output.SpendingRepository;
 import org.acme.document.application.port.output.DocumentRepository;
 import org.acme.document.application.port.output.ExtractionResultRepository;
@@ -49,17 +51,19 @@ public class DashboardUseCase {
     private final DocumentRepository documents;
     private final ExtractionResultRepository extractions;
     private final SpendingRepository spending;
+    private final ActivityRepository activity;
     private final Clock clock;
 
     @Inject
     public DashboardUseCase(ObligationRepository obligations, ServiceRepository services, UserRepository users, DocumentRepository documents,
-                            ExtractionResultRepository extractions, SpendingRepository spending, Clock clock) {
+                            ExtractionResultRepository extractions, SpendingRepository spending, ActivityRepository activity, Clock clock) {
         this.obligations = obligations;
         this.services = services;
         this.users = users;
         this.documents = documents;
         this.extractions = extractions;
         this.spending = spending;
+        this.activity = activity;
         this.clock = clock;
     }
 
@@ -77,7 +81,8 @@ public class DashboardUseCase {
         return new DashboardSummary(start, end, monthTotals(month), month.stream().filter(o -> o.obligation().getAmount() == null).count(),
                 overdueTotals(overdue), dueSoon, activeServices, toReview(userId),
                 documents.findExpiringBetween(userId, today, today.plusDays(30)).stream()
-                        .map(d -> new ExpiringDocument(d.getId(), title(d), d.getDocumentType(), d.getExpiresOn())).toList());
+                        .map(d -> new ExpiringDocument(d.getId(), title(d), d.getDocumentType(), d.getExpiresOn())).toList(),
+                activity.latest(userId, 10));
     }
 
     /** Lo pagado en los últimos 6 meses (incluido el actual, con ceros) y lo de este mes por categoría. */

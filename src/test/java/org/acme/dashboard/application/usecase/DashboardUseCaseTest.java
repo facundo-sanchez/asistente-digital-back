@@ -50,7 +50,7 @@ class DashboardUseCaseTest {
         ana = users.save(User.builder().email("ana@mail.com").name("Ana").timezone("America/Argentina/Buenos_Aires").build()).getId();
         documents = new InMemoryDocumentRepository();
         extractions = new InMemoryExtractionResultRepository();
-        useCase = new DashboardUseCase(obligations, services, users, documents, extractions, new EmptySpendingRepository(), clock);
+        useCase = new DashboardUseCase(obligations, services, users, documents, extractions, new EmptySpendingRepository(), (user, limit) -> List.of(), clock);
     }
 
     @Test
