@@ -29,7 +29,7 @@ import java.util.UUID;
 public class UploadDocumentUseCase {
 
     static final String EMPTY_FILE = "El archivo está vacío";
-    static final String INVALID_TYPE = "Solo se admiten archivos PDF, JPG, PNG o WEBP";
+    static final String INVALID_TYPE = "Solo se admiten archivos PDF, JPG, PNG, WEBP o Excel";
     static final String DUPLICATE = "Ya subiste este archivo: «%s»";
 
     private final DocumentRepository documents;

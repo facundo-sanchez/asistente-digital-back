@@ -7,6 +7,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+/** Alta / edición de una tarjeta. Cierre y vencimiento no van acá: los fija el banco en cada resumen. */
 @Schema(name = "CardRequest")
 public record CardRequest(
         @NotNull(message = "El servicio del emisor es obligatorio")
@@ -31,16 +32,7 @@ public record CardRequest(
 
         Boolean additional,
 
-        @Min(1) @Max(31)
-        Integer closingDay,
-
-        @Min(1) @Max(31)
-        Integer dueDay,
-
         @PositiveOrZero
         @Digits(integer = 15, fraction = 4)
-        BigDecimal creditLimit,
-
-        @Pattern(regexp = "[A-Z]{3}", message = "La moneda debe ser un código ISO 4217")
-        @Schema(description = "Moneda principal; por defecto ARS", example = "ARS") String currency
+        BigDecimal creditLimit
 ) {}
