@@ -8,14 +8,14 @@ name: asistente-local
 
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:19-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: asistente_digital
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d asistente_digital"]
       interval: 5s
