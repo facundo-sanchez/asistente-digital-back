@@ -105,4 +105,9 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
         String where = "userId = :userId and serviceId = :serviceId and status = :status and (" + String.join(" or ", criteria) + ")";
         return repository.list(where, Sort.descending("dueDate"), params).stream().map(mapper::toModel).toList();
     }
+
+    @Override
+    public Optional<Invoice> findByExtraction(UUID userId, UUID extractionResultId) {
+        return repository.find("userId = ?1 and extractionResultId = ?2", userId, extractionResultId).firstResultOptional().map(mapper::toModel);
+    }
 }

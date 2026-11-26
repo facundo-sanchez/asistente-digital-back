@@ -15,6 +15,7 @@ public record ProcessingJobResponse(
         int attempts,
         int maxAttempts,
         @Schema(example = "OCR_UNREADABLE") String errorCode,
+        @Schema(description = "Próximo reintento automático, si falló y quedan intentos") Instant nextRetryAt,
         Instant startedAt,
         Instant createdAt,
         Instant completedAt

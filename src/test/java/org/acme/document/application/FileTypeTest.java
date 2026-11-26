@@ -1,5 +1,6 @@
 package org.acme.document.application;
 
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -39,7 +40,20 @@ class FileTypeTest {
     void reconoceExcelPorSuContenido() throws IOException {
         assertEquals(Optional.of(FileType.XLSX), FileType.detect(zip("resumen.xlsx", "xl/workbook.xml")));
         assertEquals(Optional.empty(), FileType.detect(zip("carta.docx", "word/document.xml")), "otro ZIP no es Excel");
-        assertEquals(Optional.of(FileType.XLS), FileType.detect(new byte[]{(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1}));
+    }
+
+    @Test
+    void unXlsSoloCuentaSiSeAbreComoPlanilla() throws IOException {
+        Path xls = tmp.resolve("resumen.xls");
+        try (HSSFWorkbook workbook = new HSSFWorkbook(); var out = Files.newOutputStream(xls)) {
+            workbook.createSheet("Movimientos").createRow(0).createCell(0).setCellValue("BRINGERI");
+            workbook.write(out);
+        }
+        assertEquals(Optional.of(FileType.XLS), FileType.detect(xls));
+
+        // Cabecera OLE (la de .doc y .msg) sin una planilla adentro
+        Path fake = Files.write(tmp.resolve("carta.doc"), new byte[]{(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1, 0, 0});
+        assertEquals(Optional.empty(), FileType.detect(fake));
     }
 
     private Path zip(String name, String entry) throws IOException {

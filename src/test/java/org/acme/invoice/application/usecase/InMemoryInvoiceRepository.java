@@ -71,4 +71,9 @@ public class InMemoryInvoiceRepository implements InvoiceRepository {
                         && totalAmount.compareTo(i.getTotalAmount()) == 0))
                 .toList();
     }
+
+    @Override
+    public Optional<Invoice> findByExtraction(UUID userId, UUID extractionResultId) {
+        return rows.values().stream().filter(i -> i.getUserId().equals(userId) && extractionResultId.equals(i.getExtractionResultId())).findFirst();
+    }
 }

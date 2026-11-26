@@ -19,15 +19,20 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.acme.document.application.model.AiAvailability;
 import org.acme.document.application.model.DocumentFile;
 import org.acme.document.application.model.UploadDocumentCommand;
 import org.acme.document.infrastructure.rest.ContentDisposition;
+import org.acme.document.application.usecase.DocumentProcessingUseCase;
 import org.acme.document.application.usecase.DocumentQueryUseCase;
 import org.acme.document.application.usecase.ManageDocumentUseCase;
 import org.acme.document.application.usecase.UploadDocumentUseCase;
+import org.acme.document.infrastructure.rest.dto.AiAvailabilityResponse;
 import org.acme.document.infrastructure.rest.dto.DocumentResponse;
+import org.acme.document.infrastructure.rest.dto.ProcessingJobResponse;
 import org.acme.document.infrastructure.rest.dto.DocumentUpdateRequest;
 import org.acme.document.infrastructure.rest.mapper.DocumentRestMapper;
+import org.acme.domain.exceptions.NotFoundException;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.domain.model.DocumentType;
@@ -61,6 +66,9 @@ public class DocumentResource {
     ManageDocumentUseCase manageDocument;
 
     @Inject
+    DocumentProcessingUseCase processing;
+
+    @Inject
     DocumentRestMapper mapper;
 
     @Inject
@@ -78,6 +86,28 @@ public class DocumentResource {
             @Max(value = PageQuery.MAX_SIZE, message = "El tamaño máximo es 100") int size) {
         DocumentType type = EnumParams.parse(DocumentType.class, documentType, "Tipo de documento inválido");
         return PageResponse.from(documentQuery.list(currentUser.id(), query, type, serviceId, new PageQuery(page, size)), mapper::toResponse);
+    }
+
+    @GET
+    @Path("/ai")
+    @Operation(summary = "Disponibilidad de la lectura con IA", description = "false si no hay IA configurada; documentTypes: qué tipos puede leer")
+    public AiAvailabilityResponse aiAvailability() {
+        AiAvailability availability = processing.availability();
+        return new AiAvailabilityResponse(availability.available(), availability.documentTypes());
+    }
+
+    @GET
+    @Path("/{id}/processing")
+    @Operation(summary = "Estado de la lectura con IA", description = "404 si nunca se pidió leerlo")
+    public ProcessingJobResponse processingStatus(@PathParam("id") UUID id) {
+        return processing.status(currentUser.id(), id).map(mapper::toResponse).orElseThrow(() -> new NotFoundException("lectura"));
+    }
+
+    @POST
+    @Path("/{id}/process")
+    @Operation(summary = "Leer el documento con IA", description = "Encola la lectura (o devuelve la que está en curso). El pedido es el consentimiento para enviarlo a la IA")
+    public ProcessingJobResponse process(@PathParam("id") UUID id) {
+        return mapper.toResponse(processing.request(currentUser.id(), id));
     }
 
     @GET
@@ -125,7 +155,8 @@ public class DocumentResource {
             @RestForm("file") FileUpload file,
             @RestForm("documentType") String documentType,
             @RestForm("title") String title,
-            @RestForm("serviceId") UUID serviceId) {
+            @RestForm("serviceId") UUID serviceId,
+            @RestForm("process") boolean process) {
         if (file == null) {
             throw new ServiceException("Elegí un archivo");
         }
@@ -133,8 +164,16 @@ public class DocumentResource {
             throw new ServiceException("El título admite hasta 200 caracteres");
         }
         DocumentType type = EnumParams.parse(DocumentType.class, documentType, "Tipo de documento inválido");
-        var command = new UploadDocumentCommand(file.uploadedFile(), file.fileName(), type == null ? DocumentType.OTHER : type, title, serviceId);
+        DocumentType finalType = type == null ? DocumentType.OTHER : type;
+        // Antes de guardar el archivo: si se pidió leerlo con IA y no se puede, no se sube a medias
+        if (process) {
+            processing.checkCanProcess(currentUser.id(), finalType);
+        }
+        var command = new UploadDocumentCommand(file.uploadedFile(), file.fileName(), finalType, title, serviceId);
         UUID id = uploadDocument.upload(currentUser.id(), command).getId();
+        if (process) {
+            processing.request(currentUser.id(), id);
+        }
         // Se relee para responder con el nombre del servicio asociado
         return Response.status(Response.Status.CREATED)
                 .entity(mapper.toResponse(documentQuery.get(currentUser.id(), id)))

@@ -29,4 +29,7 @@ public interface InvoiceRepository {
      * período e importe. Los criterios en null no se usan.
      */
     List<Invoice> findPossibleDuplicates(UUID userId, UUID serviceId, String invoiceNumber, String billingPeriod, BigDecimal totalAmount);
+
+    /** La factura creada al confirmar esa propuesta de la IA. */
+    Optional<Invoice> findByExtraction(UUID userId, UUID extractionResultId);
 }
