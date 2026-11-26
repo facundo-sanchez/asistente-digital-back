@@ -119,6 +119,17 @@ class InvoiceUseCasesTest {
         assertNotNull(query.get(ANA, id).obligation());
     }
 
+    @Test
+    void avisaRepetidasPorNumeroOPorPeriodoEImporte() {
+        UUID id = register.register(ANA, draft(light, "0001-1", "2026-12")).invoice().getId();
+
+        assertEquals(1, query.duplicates(ANA, light, "0001-1", null, null, null).size());
+        assertEquals(1, query.duplicates(ANA, light, null, "2026-12", new BigDecimal("48500.00"), null).size());
+        assertEquals(0, query.duplicates(ANA, light, null, "2026-12", new BigDecimal("1"), null).size());
+        assertEquals(0, query.duplicates(ANA, light, "0001-1", null, null, id).size(), "al editar no cuenta la propia");
+        assertEquals(0, query.duplicates(BETO, light, "0001-1", null, null, null).size(), "servicio ajeno");
+    }
+
     private static Invoice draft(UUID serviceId, String number, String period) {
         return Invoice.builder()
                 .serviceId(serviceId).invoiceNumber(number).billingPeriod(period)

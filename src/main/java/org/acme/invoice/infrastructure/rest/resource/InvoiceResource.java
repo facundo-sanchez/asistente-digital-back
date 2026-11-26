@@ -34,7 +34,9 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /** Facturas del usuario (CU-002). El dueño sale siempre del token. */
@@ -75,6 +77,19 @@ public class InvoiceResource {
         }
         var filter = new InvoiceFilter(query, serviceId, EnumParams.parse(InvoiceStatus.class, status, "Estado inválido"), from, to);
         return PageResponse.from(invoiceQuery.list(currentUser.id(), filter, new PageQuery(page, size)), mapper::toResponse);
+    }
+
+    @GET
+    @Path("/duplicates")
+    @Operation(summary = "Posibles facturas repetidas", description = "Confirmadas del servicio con el mismo número, o del mismo período e importe")
+    public List<InvoiceResponse> duplicates(
+            @QueryParam("serviceId") @NotNull(message = "El servicio es obligatorio") UUID serviceId,
+            @QueryParam("invoiceNumber") @Size(max = 120) String invoiceNumber,
+            @QueryParam("billingPeriod") @Size(max = 30) String billingPeriod,
+            @QueryParam("totalAmount") BigDecimal totalAmount,
+            @QueryParam("excludeId") UUID excludeId) {
+        return invoiceQuery.duplicates(currentUser.id(), serviceId, invoiceNumber, billingPeriod, totalAmount, excludeId)
+                .stream().map(mapper::toResponse).toList();
     }
 
     @GET

@@ -5,6 +5,8 @@ import org.acme.invoice.domain.model.Invoice;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +23,10 @@ public interface InvoiceRepository {
 
     /** Una factura confirmada del servicio con ese número (RN-005). */
     Optional<Invoice> findConfirmedByNumber(UUID userId, UUID serviceId, String invoiceNumber);
+
+    /**
+     * Confirmadas del servicio que podrían ser la misma factura (RN-005): mismo número, o mismo
+     * período e importe. Los criterios en null no se usan.
+     */
+    List<Invoice> findPossibleDuplicates(UUID userId, UUID serviceId, String invoiceNumber, String billingPeriod, BigDecimal totalAmount);
 }

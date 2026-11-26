@@ -16,6 +16,9 @@ import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 import org.acme.shared.infrastructure.persistence.LikePattern;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -82,5 +85,24 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
                         userId, serviceId, invoiceNumber, InvoiceStatus.CONFIRMED)
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public List<Invoice> findPossibleDuplicates(UUID userId, UUID serviceId, String invoiceNumber, String billingPeriod, BigDecimal totalAmount) {
+        List<String> criteria = new ArrayList<>();
+        Parameters params = Parameters.with("userId", userId).and("serviceId", serviceId).and("status", InvoiceStatus.CONFIRMED);
+        if (invoiceNumber != null) {
+            criteria.add("invoiceNumber = :number");
+            params.and("number", invoiceNumber);
+        }
+        if (billingPeriod != null && totalAmount != null) {
+            criteria.add("(billingPeriod = :period and totalAmount = :amount)");
+            params.and("period", billingPeriod).and("amount", totalAmount);
+        }
+        if (criteria.isEmpty()) {
+            return List.of();
+        }
+        String where = "userId = :userId and serviceId = :serviceId and status = :status and (" + String.join(" or ", criteria) + ")";
+        return repository.list(where, Sort.descending("dueDate"), params).stream().map(mapper::toModel).toList();
     }
 }

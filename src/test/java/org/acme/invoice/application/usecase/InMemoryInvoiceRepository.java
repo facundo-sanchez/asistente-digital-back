@@ -7,6 +7,7 @@ import org.acme.invoice.domain.model.InvoiceStatus;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,5 +60,15 @@ public class InMemoryInvoiceRepository implements InvoiceRepository {
                 .filter(i -> i.getUserId().equals(userId) && i.getServiceId().equals(serviceId)
                         && invoiceNumber.equals(i.getInvoiceNumber()) && i.getStatus() == InvoiceStatus.CONFIRMED)
                 .findFirst();
+    }
+
+    @Override
+    public List<Invoice> findPossibleDuplicates(UUID userId, UUID serviceId, String invoiceNumber, String billingPeriod, BigDecimal totalAmount) {
+        return rows.values().stream()
+                .filter(i -> i.getUserId().equals(userId) && i.getServiceId().equals(serviceId) && i.getStatus() == InvoiceStatus.CONFIRMED)
+                .filter(i -> (invoiceNumber != null && invoiceNumber.equals(i.getInvoiceNumber()))
+                        || (billingPeriod != null && totalAmount != null && billingPeriod.equals(i.getBillingPeriod())
+                        && totalAmount.compareTo(i.getTotalAmount()) == 0))
+                .toList();
     }
 }

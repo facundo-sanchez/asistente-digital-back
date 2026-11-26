@@ -14,6 +14,8 @@ import org.acme.shared.application.SearchText;
 import org.acme.shared.application.model.PageQuery;
 import org.acme.shared.application.model.PageResult;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -50,5 +52,22 @@ public class InvoiceQueryUseCase {
         String serviceName = services.findNames(userId, Set.of(invoice.getServiceId())).get(invoice.getServiceId());
         ObligationSummary obligation = obligations.findByInvoices(userId, Set.of(invoice.getId())).get(invoice.getId());
         return new InvoiceView(invoice, serviceName, obligation);
+    }
+
+    /** Posibles repetidas para avisar antes de guardar (RN-005). excludeId: al editar, la propia factura no cuenta. */
+    public List<InvoiceView> duplicates(UUID userId, UUID serviceId, String invoiceNumber, String billingPeriod,
+                                        BigDecimal totalAmount, UUID excludeId) {
+        String serviceName = services.findNames(userId, Set.of(serviceId)).get(serviceId);
+        if (serviceName == null) {
+            return List.of();
+        }
+        return invoices.findPossibleDuplicates(userId, serviceId, blankToNull(invoiceNumber), blankToNull(billingPeriod), totalAmount).stream()
+                .filter(invoice -> !invoice.getId().equals(excludeId))
+                .map(invoice -> new InvoiceView(invoice, serviceName, null))
+                .toList();
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
