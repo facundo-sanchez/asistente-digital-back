@@ -4,15 +4,18 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.acme.assistant.application.model.Answer;
+import org.acme.assistant.application.model.AnswerListener;
 import org.acme.assistant.application.port.output.AssistantModel;
 import org.acme.assistant.domain.model.AssistantMessage;
 import org.acme.assistant.domain.model.MessageRole;
-import org.acme.domain.exceptions.ServiceException;
+import org.acme.domain.exceptions.UnavailableException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -24,8 +27,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-/** El asistente con Gemini: arma el historial, deja que el modelo llame herramientas y devuelve la respuesta. */
+/**
+ * El asistente con Gemini: arma el historial, deja que el modelo llame herramientas y devuelve la respuesta.
+ * Usa el modelo con streaming para mandar el texto a medida que llega.
+ */
 @ApplicationScoped
 public class GeminiAssistantModel implements AssistantModel {
 
@@ -41,12 +51,15 @@ public class GeminiAssistantModel implements AssistantModel {
             Fechas como "jueves 4/12". Usá listas cortas cuando haya varios registros. No pongas links: la app los muestra sola.
             Hoy es %s (zona horaria %s).""";
 
-    private final ChatModel model;
+    /** Por ronda: Gemini ya corta a los 60 s (GEMINI_TIMEOUT); esto evita quedar colgado si no avisa. */
+    static final long ROUND_SECONDS = 90;
+
+    private final StreamingChatModel model;
     private final AssistantToolbox toolbox;
     private final Optional<String> apiKey;
 
     @Inject
-    public GeminiAssistantModel(ChatModel model, AssistantToolbox toolbox,
+    public GeminiAssistantModel(StreamingChatModel model, AssistantToolbox toolbox,
                                 @ConfigProperty(name = "quarkus.langchain4j.ai.gemini.api-key") Optional<String> apiKey) {
         this.model = model;
         this.toolbox = toolbox;
@@ -59,7 +72,7 @@ public class GeminiAssistantModel implements AssistantModel {
     }
 
     @Override
-    public Answer answer(UUID userId, LocalDate today, ZoneId zone, List<AssistantMessage> history) {
+    public Answer answer(UUID userId, LocalDate today, ZoneId zone, List<AssistantMessage> history, AnswerListener listener) {
         AssistantTools tools = toolbox.forUser(userId, today);
         List<ToolSpecification> specs = ToolSpecifications.toolSpecificationsFrom(tools);
         String date = today.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", Locale.forLanguageTag("es-AR")));
@@ -69,22 +82,59 @@ public class GeminiAssistantModel implements AssistantModel {
             if (m.getRole() == MessageRole.USER) messages.add(UserMessage.from(m.getContent()));
             if (m.getRole() == MessageRole.ASSISTANT) messages.add(AiMessage.from(m.getContent()));
         }
-        try {
-            for (int round = 0; round < MAX_ROUNDS; round++) {
-                AiMessage reply = model.chat(ChatRequest.builder().messages(messages).toolSpecifications(specs).build()).aiMessage();
-                if (!reply.hasToolExecutionRequests()) {
-                    return new Answer(reply.text(), tools.references(), tools.used());
-                }
-                messages.add(reply);
-                for (ToolExecutionRequest request : reply.toolExecutionRequests()) {
-                    messages.add(ToolExecutionResultMessage.from(request, tools.execute(request)));
-                }
+        int tokens = 0;
+        for (int round = 0; round < MAX_ROUNDS; round++) {
+            ChatResponse response = chat(ChatRequest.builder().messages(messages).toolSpecifications(specs).build(), listener);
+            if (response.tokenUsage() != null && response.tokenUsage().totalTokenCount() != null) {
+                tokens += response.tokenUsage().totalTokenCount();
             }
-        } catch (RuntimeException e) {
-            // Sin el contenido de la conversación en el log: solo el tipo de error
-            LOG.errorf("Gemini no respondió al asistente: %s", e.getClass().getSimpleName());
-            throw new ServiceException("No pude responder ahora, probá de nuevo en un rato");
+            AiMessage reply = response.aiMessage();
+            if (!reply.hasToolExecutionRequests()) {
+                return new Answer(reply.text(), tools.references(), tools.used(), tokens);
+            }
+            messages.add(reply);
+            for (ToolExecutionRequest request : reply.toolExecutionRequests()) {
+                listener.tool(request.name());
+                messages.add(ToolExecutionResultMessage.from(request, tools.execute(request)));
+            }
         }
-        throw new ServiceException("No pude armar la respuesta, probá preguntarlo de otra forma");
+        throw new UnavailableException("No pude armar la respuesta, probá preguntarlo de otra forma");
+    }
+
+    /** Una ronda con streaming: manda el texto al listener y espera la respuesta completa. */
+    private ChatResponse chat(ChatRequest request, AnswerListener listener) {
+        CompletableFuture<ChatResponse> done = new CompletableFuture<>();
+        try {
+            model.chat(request, new StreamingChatResponseHandler() {
+                @Override
+                public void onPartialResponse(String partial) {
+                    listener.text(partial);
+                }
+
+                @Override
+                public void onCompleteResponse(ChatResponse response) {
+                    done.complete(response);
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    done.completeExceptionally(error);
+                }
+            });
+            return done.get(ROUND_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw failed(e);
+        } catch (ExecutionException e) {
+            throw failed(e.getCause());
+        } catch (TimeoutException | RuntimeException e) {
+            throw failed(e);
+        }
+    }
+
+    private static UnavailableException failed(Throwable e) {
+        // Sin el contenido de la conversación en el log: solo el tipo de error
+        LOG.errorf("Gemini no respondió al asistente: %s", e == null ? "?" : e.getClass().getSimpleName());
+        return new UnavailableException("No pude responder ahora, probá de nuevo en un rato");
     }
 }

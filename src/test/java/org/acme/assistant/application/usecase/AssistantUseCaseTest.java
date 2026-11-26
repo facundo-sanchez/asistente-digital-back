@@ -3,7 +3,10 @@ package org.acme.assistant.application.usecase;
 import org.acme.assistant.domain.model.AssistantMessage;
 import org.acme.assistant.domain.model.Conversation;
 import org.acme.assistant.domain.model.MessageRole;
+import org.acme.assistant.application.model.AnswerListener;
 import org.acme.domain.exceptions.NotFoundException;
+import org.acme.domain.exceptions.TooManyRequestsException;
+import org.acme.domain.exceptions.UnavailableException;
 import org.acme.user.application.usecase.InMemoryUserRepository;
 import org.acme.user.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +16,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,6 +50,49 @@ class AssistantUseCaseTest {
         assertEquals("¿Qué facturas no pagué?", detail.conversation().getTitle());
         assertEquals(ana, model.lastUser);
         assertEquals(LocalDate.of(2026, 11, 30), model.lastToday);
+    }
+
+    @Test
+    void avisaElAvanceYGuardaLosTokens() {
+        UUID id = assistant.create(ana, null).getId();
+        List<String> events = new ArrayList<>();
+
+        AssistantMessage answer = assistant.send(ana, id, "¿Qué debo?", new AnswerListener() {
+            @Override
+            public void tool(String name) {
+                events.add("tool:" + name);
+            }
+
+            @Override
+            public void text(String delta) {
+                events.add(delta);
+            }
+        });
+
+        assertEquals(List.of("tool:unpaidInvoices", "Tenés 1 ", "factura sin pagar."), events);
+        assertEquals(120, answer.getMetadata().get(AssistantUseCase.METADATA_TOKENS));
+    }
+
+    @Test
+    void siElModeloFallaLaPreguntaQuedaYReintentarNoLaRepite() {
+        UUID id = assistant.create(ana, null).getId();
+        model.failNext = new UnavailableException("Gemini caído");
+
+        assertThrows(UnavailableException.class, () -> assistant.send(ana, id, "¿Qué vence?"));
+        assertEquals(1, assistant.get(ana, id).messages().size());
+
+        assistant.send(ana, id, "¿Qué vence?");
+        assertEquals(2, assistant.get(ana, id).messages().size());
+    }
+
+    @Test
+    void cortaAlPasarLas30PreguntasPorHora() {
+        UUID id = assistant.create(ana, null).getId();
+        for (int i = 0; i < AssistantUseCase.QUESTIONS_PER_HOUR; i++) {
+            assistant.send(ana, id, "pregunta " + i);
+        }
+
+        assertThrows(TooManyRequestsException.class, () -> assistant.send(ana, id, "una más"));
     }
 
     @Test

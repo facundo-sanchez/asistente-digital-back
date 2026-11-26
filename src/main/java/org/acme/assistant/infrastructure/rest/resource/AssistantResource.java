@@ -1,6 +1,8 @@
 package org.acme.assistant.infrastructure.rest.resource;
 
 import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.acme.assistant.application.model.ConversationDetail;
 import org.acme.assistant.application.usecase.AssistantUseCase;
+import org.acme.assistant.infrastructure.rest.dto.AssistantStreamEvent;
 import org.acme.assistant.infrastructure.rest.dto.ConversationDetailResponse;
 import org.acme.assistant.infrastructure.rest.dto.ConversationResponse;
 import org.acme.assistant.infrastructure.rest.dto.CreateConversationRequest;
@@ -19,6 +22,7 @@ import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.reactive.RestStreamElementType;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,6 +41,9 @@ public class AssistantResource {
 
     @Inject
     AssistantRestMapper mapper;
+
+    @Inject
+    AssistantStream stream;
 
     @Inject
     CurrentUser currentUser;
@@ -74,5 +81,17 @@ public class AssistantResource {
     @Operation(summary = "Preguntar", description = "Guarda la pregunta y devuelve la respuesta; metadata.references trae los registros usados")
     public MessageResponse send(@PathParam("id") UUID id, @Valid @NotNull SendMessageRequest request) {
         return mapper.toResponse(assistant.send(currentUser.id(), id, request.content()));
+    }
+
+    @POST
+    @Path("/{id}/messages/stream")
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    @RestStreamElementType(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Preguntar con respuesta progresiva (SSE)",
+            description = "Eventos tool, text y al final done (la respuesta guardada) o error")
+    public Multi<AssistantStreamEvent> sendStream(@PathParam("id") UUID id, @Valid @NotNull SendMessageRequest request) {
+        UUID userId = currentUser.id();
+        return Multi.createFrom().<AssistantStreamEvent>emitter(emitter -> stream.run(userId, id, request.content(), emitter))
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }

@@ -1,6 +1,7 @@
 package org.acme.assistant.application.port.output;
 
 import org.acme.assistant.application.model.Answer;
+import org.acme.assistant.application.model.AnswerListener;
 import org.acme.assistant.domain.model.AssistantMessage;
 
 import java.time.LocalDate;
@@ -13,6 +14,6 @@ public interface AssistantModel {
 
     boolean available();
 
-    /** history termina con la pregunta nueva. */
-    Answer answer(UUID userId, LocalDate today, ZoneId zone, List<AssistantMessage> history);
+    /** history termina con la pregunta nueva; listener recibe el avance mientras se arma la respuesta. */
+    Answer answer(UUID userId, LocalDate today, ZoneId zone, List<AssistantMessage> history, AnswerListener listener);
 }

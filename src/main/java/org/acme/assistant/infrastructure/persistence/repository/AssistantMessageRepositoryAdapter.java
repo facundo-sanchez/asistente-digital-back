@@ -7,9 +7,11 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.acme.assistant.application.port.output.AssistantMessageRepository;
 import org.acme.assistant.domain.model.AssistantMessage;
+import org.acme.assistant.domain.model.MessageRole;
 import org.acme.assistant.infrastructure.persistence.entity.AssistantMessageEntity;
 import org.acme.assistant.infrastructure.persistence.mapper.AssistantPersistenceMapper;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +37,17 @@ public class AssistantMessageRepositoryAdapter implements AssistantMessageReposi
                 .page(Page.ofSize(limit)).list().stream().map(mapper::toModel).toList());
         Collections.reverse(last);
         return last;
+    }
+
+    @Override
+    public long countQuestionsSince(UUID userId, Instant since) {
+        return repository.getEntityManager().createQuery("""
+                        select count(m) from AssistantMessageEntity m, ConversationEntity c
+                        where c.id = m.conversationId and c.userId = :userId and m.role = :role and m.createdAt >= :since""", Long.class)
+                .setParameter("userId", userId)
+                .setParameter("role", MessageRole.USER)
+                .setParameter("since", since)
+                .getSingleResult();
     }
 
     @Override

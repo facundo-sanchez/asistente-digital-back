@@ -21,6 +21,8 @@ public class DomainExceptionHandler implements ExceptionMapper<DomainException> 
             status = Response.Status.UNAUTHORIZED;
         } else if (exception instanceof ConflictException) {
             status = Response.Status.CONFLICT;
+        } else if (exception instanceof TooManyRequestsException) {
+            status = Response.Status.TOO_MANY_REQUESTS;
         } else if (exception instanceof UnavailableException) {
             status = Response.Status.SERVICE_UNAVAILABLE;
         }
