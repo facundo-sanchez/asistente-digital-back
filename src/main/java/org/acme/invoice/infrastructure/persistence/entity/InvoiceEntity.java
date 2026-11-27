@@ -74,6 +74,9 @@ public class InvoiceEntity {
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 
+    @Column(name = "price_increase", precision = 7, scale = 1)
+    private BigDecimal priceIncrease;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

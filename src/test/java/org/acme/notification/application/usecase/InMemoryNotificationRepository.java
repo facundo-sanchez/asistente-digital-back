@@ -73,4 +73,11 @@ public class InMemoryNotificationRepository implements NotificationRepository {
                         && !n.getScheduledAt().isAfter(now))
                 .sorted(Comparator.comparing(Notification::getScheduledAt)).limit(limit).map(n -> n.toBuilder().build()).toList();
     }
+
+    @Override
+    public List<Notification> findDuePush(Instant now, int limit) {
+        return rows.stream().filter(n -> n.getChannel() == NotificationChannel.PUSH && n.getStatus() == NotificationStatus.PENDING
+                        && !n.getScheduledAt().isAfter(now))
+                .sorted(Comparator.comparing(Notification::getScheduledAt)).limit(limit).map(n -> n.toBuilder().build()).toList();
+    }
 }

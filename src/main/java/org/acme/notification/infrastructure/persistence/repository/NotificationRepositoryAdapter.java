@@ -74,6 +74,13 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
+    public List<Notification> findDuePush(Instant now, int limit) {
+        return repository.find("channel = ?1 and status = ?2 and scheduledAt <= ?3", Sort.by("scheduledAt"),
+                        NotificationChannel.PUSH, NotificationStatus.PENDING, now)
+                .page(Page.ofSize(limit)).list().stream().map(mapper::toModel).toList();
+    }
+
+    @Override
     public List<Notification> findDueEmails(Instant now, int limit) {
         return repository.find("channel = ?1 and status = ?2 and scheduledAt <= ?3", Sort.by("scheduledAt"),
                         NotificationChannel.EMAIL, NotificationStatus.PENDING, now)

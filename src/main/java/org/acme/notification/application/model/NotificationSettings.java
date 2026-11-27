@@ -19,7 +19,8 @@ public record NotificationSettings(List<NotificationPreference> preferences) {
     public static final List<NotificationChannel> CHANNELS = List.of(NotificationChannel.WEB, NotificationChannel.EMAIL);
     /** Los avisos que se generan hoy. */
     public static final List<NotificationType> TYPES = List.of(NotificationType.OBLIGATION_DUE_SOON, NotificationType.OBLIGATION_OVERDUE,
-            NotificationType.DOCUMENT_EXPIRING, NotificationType.DOCUMENT_DETECTED, NotificationType.INTEGRATION_DISCONNECTED);
+            NotificationType.DOCUMENT_EXPIRING, NotificationType.DOCUMENT_DETECTED, NotificationType.INTEGRATION_DISCONNECTED,
+            NotificationType.PRICE_INCREASE);
 
     /** Las guardadas sobre los valores por defecto. */
     public static NotificationSettings of(UUID userId, List<NotificationPreference> saved) {

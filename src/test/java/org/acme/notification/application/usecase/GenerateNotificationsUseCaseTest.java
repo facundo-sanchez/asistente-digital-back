@@ -5,6 +5,7 @@ import org.acme.document.domain.model.Document;
 import org.acme.notification.domain.model.Notification;
 import org.acme.notification.domain.model.NotificationChannel;
 import org.acme.notification.domain.model.NotificationPreference;
+import org.acme.notification.domain.model.NotificationStatus;
 import org.acme.notification.domain.model.NotificationType;
 import org.acme.obligation.application.usecase.InMemoryObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
@@ -32,7 +33,9 @@ class GenerateNotificationsUseCaseTest {
     private InMemoryObligationRepository obligations;
     private InMemoryDocumentRepository documents;
     private InMemoryUserRepository users;
+    private final org.acme.service.application.usecase.InMemoryServiceRepository services = new org.acme.service.application.usecase.InMemoryServiceRepository();
     private NotificationPreferencesUseCase preferences;
+    private final InMemoryPushSubscriptionRepository push = new InMemoryPushSubscriptionRepository();
     private UUID ana;
 
     @BeforeEach
@@ -47,7 +50,7 @@ class GenerateNotificationsUseCaseTest {
 
     /** 12:00 UTC = 9:00 en Buenos Aires. */
     private GenerateNotificationsUseCase at(String instant) {
-        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
+        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, services, push, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 
     @Test
@@ -68,6 +71,38 @@ class GenerateNotificationsUseCaseTest {
 
         assertEquals(2, at("2026-11-28T12:00:00Z").generate(), "el día del vencimiento sale el umbral 0");
         assertEquals("Vence hoy · $ 40.000,00", notifications.rows.getLast().getMessage().replace(' ', ' '));
+    }
+
+    @Test
+    void conDebitoAutomaticoAvisaQueSeDebitaYSoloLoCargadoTardeComoVencido() {
+        UUID luz = services.save(org.acme.service.domain.model.Service.builder().userId(ana).providerId(UUID.randomUUID()).name("Luz")
+                .category(org.acme.shared.domain.model.ServiceCategory.values()[0]).autoDebit(true).build()).getId();
+        UUID tomorrow = obligation("Luz", "40000", LocalDate.of(2026, 11, 27));
+        UUID inThreeDays = obligation("Luz diciembre", "40000", LocalDate.of(2026, 11, 29));
+        UUID yesterday = obligation("Luz ayer", "40000", LocalDate.of(2026, 11, 25));
+        UUID loadedLate = obligation("Luz vieja", "40000", LocalDate.of(2026, 11, 10));
+        for (UUID id : List.of(tomorrow, inThreeDays, yesterday, loadedLate)) {
+            obligations.rows.get(id).setServiceId(luz);
+        }
+
+        assertEquals(4, at("2026-11-26T12:00:00Z").generate(), "el de mañana y el viejo, en la app y por email");
+        List<UUID> overdue = notifications.rows.stream().filter(n -> n.getNotificationType() == NotificationType.OBLIGATION_OVERDUE)
+                .map(Notification::getObligationId).distinct().toList();
+        assertEquals(List.of(loadedLate), overdue, "el de ayer lo paga el débito; el cargado tarde se avisa como vencido");
+        assertEquals("Se debita mañana · $ 40.000,00", notifications.rows.getFirst().getMessage().replace(' ', ' '));
+    }
+
+    @Test
+    void conUnDispositivoActivadoCadaAvisoDeLaAppTambienVaPorPush() {
+        push.save(org.acme.notification.domain.model.PushSubscription.builder().userId(ana).endpoint("https://push/celu").p256dh("k").auth("a").build());
+        obligation("Luz", "40000", LocalDate.of(2026, 11, 27));
+
+        at("2026-11-26T12:00:00Z").generate();
+        at("2026-11-26T13:00:00Z").generate();
+
+        List<Notification> pushes = notifications.rows.stream().filter(n -> n.getChannel() == NotificationChannel.PUSH).toList();
+        assertEquals(1, pushes.size(), "uno por aviso, sin repetir");
+        assertEquals(NotificationStatus.PENDING, pushes.getFirst().getStatus());
     }
 
     @Test
@@ -109,7 +144,7 @@ class GenerateNotificationsUseCaseTest {
     void lasPreferenciasCompletanLoQueFaltaConLosValoresPorDefecto() {
         List<NotificationPreference> all = preferences.replace(ana, List.of(
                 pref(NotificationChannel.PUSH, NotificationType.ALL, true, List.of(1)))).preferences();
-        assertEquals(12, all.size(), "WEB y EMAIL: ALL más 5 tipos; PUSH se ignora");
+        assertEquals(14, all.size(), "WEB y EMAIL: ALL más 6 tipos; PUSH se ignora");
         assertFalse(preferences.settings(ana).wants(NotificationChannel.EMAIL, NotificationType.DOCUMENT_DETECTED));
         assertEquals(List.of(0, 1, 3), preferences.settings(ana).days(NotificationChannel.EMAIL));
     }

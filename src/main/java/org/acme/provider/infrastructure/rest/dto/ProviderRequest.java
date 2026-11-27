@@ -19,5 +19,11 @@ public record ProviderRequest(
 
         @Size(max = 500)
         @Pattern(regexp = "^https?://\\S+$", message = "El sitio web tiene que empezar con http:// o https://")
-        @Schema(example = "https://www.aguax.com.ar") String website
+        @Schema(example = "https://www.aguax.com.ar") String website,
+
+        @Size(max = 200)
+        @Pattern(regexp = "^\\s*$|^\\s*([^@\\s]+@)?[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+\\s*$",
+                message = "Poné una dirección de email (info@empresa.com.ar) o un dominio (empresa.com.ar)")
+        @Schema(description = "Desde dónde llegan sus facturas: dirección o dominio. Gmail las detecta con esto",
+                example = "info@nativaseguros.com.ar") String invoiceSender
 ) {}

@@ -13,5 +13,6 @@ public record ProviderResponse(
         ServiceCategory category,
         @Schema(example = "https://www.coopelectric.com.ar") String website,
         @Schema(description = "true si lo creó el usuario (no pertenece al catálogo)") boolean custom,
-        boolean active
+        boolean active,
+        @Schema(description = "Solo en proveedores propios: desde dónde llegan sus facturas", example = "info@nativaseguros.com.ar") String invoiceSender
 ) {}

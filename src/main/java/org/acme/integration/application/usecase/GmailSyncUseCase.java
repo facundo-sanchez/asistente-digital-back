@@ -125,7 +125,7 @@ public class GmailSyncUseCase {
         } catch (GmailAccessRevokedException e) {
             return 0;
         }
-        List<EmailRule> active = rules.findActive();
+        List<EmailRule> active = rules.findActive(integration.getUserId());
         int imported = 0;
         for (String id : newMessageIds(integration, token, active)) {
             imported += process(integration, token, active, gmail.message(token, id));

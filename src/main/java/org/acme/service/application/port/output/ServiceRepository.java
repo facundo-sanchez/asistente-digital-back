@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** Servicios de un usuario. Toda consulta va filtrada por userId (RN-002). */
@@ -19,6 +20,9 @@ public interface ServiceRepository {
     Service save(Service service);
 
     Optional<Service> findByIdForUser(UUID userId, UUID serviceId);
+
+    /** Ids de los servicios activos del usuario que se pagan por débito automático. */
+    Set<UUID> findAutoDebitIds(UUID userId);
 
     /** Todos los servicios del usuario con ese proveedor (para detectar duplicados). */
     List<Service> findByProvider(UUID userId, UUID providerId);

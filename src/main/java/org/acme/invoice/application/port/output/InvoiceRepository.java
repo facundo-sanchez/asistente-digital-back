@@ -16,6 +16,9 @@ public interface InvoiceRepository {
     /** Inserta si no tiene id; si no, actualiza. */
     Invoice save(Invoice invoice);
 
+    /** Las últimas confirmadas del servicio en esa moneda, sin la factura dada, de la más nueva a la más vieja. */
+    List<Invoice> findLastConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, int limit);
+
     Optional<Invoice> findByIdForUser(UUID userId, UUID invoiceId);
 
     /** Por vencimiento, más nuevas primero. */

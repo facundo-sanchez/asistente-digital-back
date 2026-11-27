@@ -27,8 +27,9 @@ public class EmailRuleRepositoryAdapter implements EmailRuleRepository {
     ProviderPanacheRepository providers;
 
     @Override
-    public List<EmailRule> findActive() {
-        Map<UUID, ProviderEntity> catalog = providers.list("userId is null and active = true").stream()
+    public List<EmailRule> findActive(UUID userId) {
+        // Proveedores del catálogo y los propios de este usuario: la regla de un proveedor propio no lee el correo de otro
+        Map<UUID, ProviderEntity> catalog = providers.list("(userId is null or userId = ?1) and active = true", userId).stream()
                 .collect(Collectors.toMap(ProviderEntity::getId, Function.identity()));
         return rules.list("active = true", Sort.by("priority")).stream()
                 .filter(r -> catalog.containsKey(r.getProviderId()))

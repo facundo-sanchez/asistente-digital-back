@@ -11,6 +11,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
+
+    public static final int DEFAULT_PRICE_INCREASE_THRESHOLD = 20;
+    public static final java.util.Set<Integer> PRICE_INCREASE_THRESHOLDS = java.util.Set.of(10, 20, 30, 50);
+
     private UUID id;
     private String email;
     private String name;
@@ -30,6 +34,9 @@ public class User {
     private boolean active = true;
     /** Billetera para pagar facturas; null si no eligió ninguna. */
     private PaymentWallet paymentWallet;
+    /** Desde qué % de aumento de una factura se avisa (10, 20, 30 o 50). */
+    @Builder.Default
+    private int priceIncreaseThreshold = DEFAULT_PRICE_INCREASE_THRESHOLD;
     private Instant lastLoginAt;
     private Instant createdAt;
     private Instant updatedAt;

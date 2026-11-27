@@ -34,6 +34,7 @@ public interface InvoiceRestMapper {
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "confidenceScore", ignore = true)
     @Mapping(target = "confirmedAt", ignore = true)
+    @Mapping(target = "priceIncrease", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Invoice toModel(InvoiceRequest request);

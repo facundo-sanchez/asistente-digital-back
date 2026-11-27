@@ -30,6 +30,10 @@ public class ProviderQueryUseCase {
 
     /** Un proveedor propio de otro usuario responde igual que uno inexistente: no se revela que existe. */
     public Provider get(UUID userId, UUID providerId) {
-        return providers.findVisibleById(userId, providerId).orElseThrow(() -> new NotFoundException("proveedor"));
+        Provider provider = providers.findVisibleById(userId, providerId).orElseThrow(() -> new NotFoundException("proveedor"));
+        if (provider.isCustom()) {
+            providers.findInvoiceSender(providerId).ifPresent(provider::setInvoiceSender);
+        }
+        return provider;
     }
 }

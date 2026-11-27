@@ -11,5 +11,7 @@ public enum NotificationType {
     DOCUMENT_EXPIRING,
     MAINTENANCE_DUE,
     /** Resumen de tarjeta detectado por email sin PDF: invita a subirlo para ver los consumos. */
-    CARD_STATEMENT_AVAILABLE
+    CARD_STATEMENT_AVAILABLE,
+    /** Una factura vino más cara que el promedio de las anteriores del servicio (módulo 16). */
+    PRICE_INCREASE
 }

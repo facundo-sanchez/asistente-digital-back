@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,15 @@ public class ServiceRepositoryAdapter implements ServiceRepository {
         return repository.find("id = :id and userId = :userId", Parameters.with("id", serviceId).and("userId", userId))
                 .firstResultOptional()
                 .map(mapper::toModel);
+    }
+
+    @Override
+    public Set<UUID> findAutoDebitIds(UUID userId) {
+        return repository.getEntityManager()
+                .createQuery("select s.id from ServiceEntity s where s.userId = :userId and s.autoDebit = true and s.active = true", UUID.class)
+                .setParameter("userId", userId)
+                .getResultStream()
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     @Override

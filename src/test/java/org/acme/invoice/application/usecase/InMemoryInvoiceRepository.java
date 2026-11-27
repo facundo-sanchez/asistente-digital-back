@@ -32,6 +32,15 @@ public class InMemoryInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
+    public List<Invoice> findLastConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, int limit) {
+        return rows.values().stream()
+                .filter(i -> i.getUserId().equals(userId) && serviceId.equals(i.getServiceId()) && currency.equals(i.getCurrency())
+                        && !i.getId().equals(excludeId) && i.getStatus() == org.acme.invoice.domain.model.InvoiceStatus.CONFIRMED)
+                .sorted(java.util.Comparator.comparing(Invoice::getDueDate).reversed())
+                .limit(limit).toList();
+    }
+
+    @Override
     public Optional<Invoice> findByIdForUser(UUID userId, UUID invoiceId) {
         return Optional.ofNullable(rows.get(invoiceId)).filter(i -> i.getUserId().equals(userId)).map(i -> i.toBuilder().build());
     }

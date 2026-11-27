@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.acme.domain.exceptions.ConflictException;
+import org.acme.domain.exceptions.NotFoundException;
 import org.acme.provider.application.port.output.ProviderRepository;
 import org.acme.provider.domain.model.Provider;
 
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class CreateProviderUseCase {
 
     static final String DUPLICATE_NAME = "Ya existe un proveedor con ese nombre: elegilo de la lista";
+    static final String NOT_OWN = "Solo podés editar los proveedores que agregaste vos";
     private static final int MAX_CODE_LENGTH = 80;
 
     private final ProviderRepository providers;
@@ -36,7 +38,7 @@ public class CreateProviderUseCase {
             throw new ConflictException(DUPLICATE_NAME);
         }
         String website = draft.getWebsite() == null || draft.getWebsite().isBlank() ? null : draft.getWebsite().trim();
-        return providers.save(Provider.builder()
+        Provider saved = providers.save(Provider.builder()
                 .userId(userId)
                 .name(name)
                 .code(uniqueCode(userId, name))
@@ -44,6 +46,32 @@ public class CreateProviderUseCase {
                 .website(website)
                 .active(true)
                 .build());
+        return withSender(saved, draft.getInvoiceSender());
+    }
+
+    /** Editar un proveedor propio: nombre, categoría, sitio y remitente de facturas. Los del catálogo no se editan. */
+    @Transactional
+    public Provider update(UUID userId, UUID providerId, Provider draft) {
+        Provider provider = providers.findVisibleById(userId, providerId).orElseThrow(() -> new NotFoundException("proveedor"));
+        if (!userId.equals(provider.getUserId())) {
+            throw new ConflictException(NOT_OWN);
+        }
+        String name = draft.getName().trim().replaceAll("\\s+", " ");
+        if (!name.equalsIgnoreCase(provider.getName()) && providers.existsVisibleWithName(userId, name)) {
+            throw new ConflictException(DUPLICATE_NAME);
+        }
+        provider.setName(name);
+        provider.setCategory(draft.getCategory());
+        provider.setWebsite(draft.getWebsite() == null || draft.getWebsite().isBlank() ? null : draft.getWebsite().trim());
+        return withSender(providers.save(provider), draft.getInvoiceSender());
+    }
+
+    /** Guarda el remitente (dirección o dominio, en minúsculas; vacío = ninguno) y lo devuelve en el proveedor. */
+    private Provider withSender(Provider provider, String sender) {
+        String clean = sender == null || sender.isBlank() ? null : sender.trim().toLowerCase(Locale.ROOT);
+        providers.saveInvoiceSender(provider.getId(), clean);
+        provider.setInvoiceSender(clean);
+        return provider;
     }
 
     /** Code legible y único entre los proveedores del usuario: "Agua Ñandú" → "AGUA_NANDU", "AGUA_NANDU_2"… */

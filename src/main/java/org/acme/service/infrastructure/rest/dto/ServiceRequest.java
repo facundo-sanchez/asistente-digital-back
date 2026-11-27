@@ -40,6 +40,11 @@ public record ServiceRequest(
         @Pattern(regexp = "\\s*(https://\\S+)?\\s*", message = "Ingresá un link que empiece con https://")
         @Schema(description = "Página donde se pagan sus facturas", example = "https://www.camuzzigas.com.ar") String paymentUrl,
 
+        @Schema(description = "Se paga por débito automático") boolean autoDebit,
+
+        @Size(max = 100)
+        @Schema(description = "Con qué se debita", example = "Visa BBVA") String autoDebitMethod,
+
         @Schema(description = "Datos adicionales libres (opcional)")
         Map<String, Object> metadata
 ) {}

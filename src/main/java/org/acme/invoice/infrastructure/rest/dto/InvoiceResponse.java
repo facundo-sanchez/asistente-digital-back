@@ -28,6 +28,7 @@ public record InvoiceResponse(
         InvoiceSource source,
         @Schema(example = "0.97") BigDecimal confidenceScore,
         Instant confirmedAt,
+        @Schema(description = "Cuánto subió (%) respecto del promedio de las últimas facturas; null si no pasó el umbral", example = "38.2") BigDecimal priceIncrease,
         @Schema(description = "Vencimiento que generó la factura (null si no generó)") UUID obligationId,
         @Schema(description = "Estado del vencimiento: pendiente, pagado, vencido…") EffectiveObligationStatus obligationStatus,
         Instant createdAt,

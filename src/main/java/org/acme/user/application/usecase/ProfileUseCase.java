@@ -49,6 +49,16 @@ public class ProfileUseCase {
         return users.save(user);
     }
 
+    @Transactional
+    public User setPriceIncreaseThreshold(UUID userId, int threshold) {
+        if (!User.PRICE_INCREASE_THRESHOLDS.contains(threshold)) {
+            throw new ServiceException("El aviso de aumentos admite 10, 20, 30 o 50 %");
+        }
+        User user = get(userId);
+        user.setPriceIncreaseThreshold(threshold);
+        return users.save(user);
+    }
+
     private static void validate(UpdateProfileCommand command) {
         try {
             ZoneId.of(command.timezone());

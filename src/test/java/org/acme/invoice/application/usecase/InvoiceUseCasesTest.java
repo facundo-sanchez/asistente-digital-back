@@ -56,7 +56,9 @@ class InvoiceUseCasesTest {
         light = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build()).getId();
         betoGas = services.save(Service.builder().userId(BETO).providerId(UUID.randomUUID()).name("Gas Beto").build()).getId();
         InvoiceDraftValidator validator = new InvoiceDraftValidator(services, documents, invoices);
-        register = new RegisterInvoiceUseCase(invoices, obligations, validator, Clock.fixed(NOW, ZoneOffset.UTC));
+        register = new RegisterInvoiceUseCase(invoices, obligations, validator,
+                new PriceIncreaseCheck(invoices, new org.acme.user.application.usecase.InMemoryUserRepository(Clock.systemUTC()), (i, n, o, p, a) -> {}),
+                Clock.fixed(NOW, ZoneOffset.UTC));
         query = new InvoiceQueryUseCase(invoices, services, obligations);
         manage = new ManageInvoiceUseCase(invoices, obligations, validator, Clock.fixed(NOW, ZoneOffset.UTC));
     }

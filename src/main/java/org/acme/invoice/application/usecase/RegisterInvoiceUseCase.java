@@ -27,14 +27,16 @@ public class RegisterInvoiceUseCase {
     private final InvoiceRepository invoices;
     private final ObligationRepository obligations;
     private final InvoiceDraftValidator validator;
+    private final PriceIncreaseCheck priceIncrease;
     private final Clock clock;
 
     @Inject
     public RegisterInvoiceUseCase(InvoiceRepository invoices, ObligationRepository obligations,
-                                  InvoiceDraftValidator validator, Clock clock) {
+                                  InvoiceDraftValidator validator, PriceIncreaseCheck priceIncrease, Clock clock) {
         this.invoices = invoices;
         this.obligations = obligations;
         this.validator = validator;
+        this.priceIncrease = priceIncrease;
         this.clock = clock;
     }
 
@@ -51,7 +53,8 @@ public class RegisterInvoiceUseCase {
         invoice.confirm(Instant.now(clock));
         Invoice saved = invoices.save(invoice);
         ObligationSummary obligation = obligations.save(obligationFor(saved, serviceName));
-        return new InvoiceView(saved, serviceName, obligation);
+        Invoice checked = priceIncrease.check(saved, serviceName, obligation.obligation().getId());
+        return new InvoiceView(checked, serviceName, obligation);
     }
 
     /** El vencimiento de una factura: «Luz casa · factura 2026-12» (o el número si no hay período). */

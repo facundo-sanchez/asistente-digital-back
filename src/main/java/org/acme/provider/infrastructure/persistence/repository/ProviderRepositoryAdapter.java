@@ -1,5 +1,10 @@
 package org.acme.provider.infrastructure.persistence.repository;
 
+import jakarta.transaction.Transactional;
+import org.acme.provider.domain.model.EmailExtractionMode;
+import org.acme.provider.infrastructure.persistence.entity.ProviderEmailRuleEntity;
+import org.acme.shared.domain.model.DocumentType;
+
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Parameters;
@@ -31,6 +36,9 @@ public class ProviderRepositoryAdapter implements ProviderRepository {
 
     @Inject
     ProviderPanacheRepository repository;
+
+    @Inject
+    ProviderEmailRulePanacheRepository rules;
 
     @Inject
     ProviderPersistenceMapper mapper;
@@ -74,8 +82,53 @@ public class ProviderRepositoryAdapter implements ProviderRepository {
     @Override
     public Provider save(Provider provider) {
         ProviderEntity entity = mapper.toEntity(provider);
-        repository.persistAndFlush(entity);
+        if (entity.getId() == null) {
+            repository.persistAndFlush(entity);
+        } else {
+            entity = repository.getEntityManager().merge(entity);
+            repository.flush();
+        }
         return mapper.toModel(entity);
+    }
+
+    @Override
+    public Optional<String> findInvoiceSender(UUID providerId) {
+        Optional<ProviderEmailRuleEntity> rule = rules.find("providerId", providerId).firstResultOptional();
+        if (rule.isEmpty()) {
+            return Optional.empty();
+        }
+        if (rule.get().getSenderAddress() != null) {
+            return Optional.of(rule.get().getSenderAddress());
+        }
+        String[] domains = repository.findById(providerId).getEmailDomains();
+        return domains == null || domains.length == 0 ? Optional.empty() : Optional.of(domains[0]);
+    }
+
+    @Override
+    @Transactional
+    public void saveInvoiceSender(UUID providerId, String sender) {
+        ProviderEntity provider = repository.findById(providerId);
+        if (sender == null) {
+            rules.delete("providerId", providerId);
+            provider.setEmailDomains(new String[0]);
+            return;
+        }
+        boolean address = sender.contains("@");
+        // Una dirección se reconoce exacta; un dominio, por el dominio del proveedor (y sus subdominios)
+        provider.setEmailDomains(address ? new String[0] : new String[]{sender});
+        ProviderEmailRuleEntity rule = rules.find("providerId", providerId).firstResultOptional().orElseGet(ProviderEmailRuleEntity::new);
+        rule.setProviderId(providerId);
+        rule.setSenderAddress(address ? sender : null);
+        // Adjunto si trae (PDF o imagen); si no, el texto del email: los dos los lee la IA
+        rule.setExtractionMode(EmailExtractionMode.EMAIL_BODY);
+        rule.setRequiresAttachment(false);
+        rule.setDocumentType(DocumentType.INVOICE);
+        rule.setPriority(200);
+        rule.setActive(true);
+        if (rule.getId() == null) {
+            rules.persist(rule);
+        }
+        rules.flush();
     }
 
     @Override

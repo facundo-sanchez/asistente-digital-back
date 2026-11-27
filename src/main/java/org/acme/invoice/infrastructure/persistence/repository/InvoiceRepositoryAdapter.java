@@ -45,6 +45,13 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     }
 
     @Override
+    public List<Invoice> findLastConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, int limit) {
+        return repository.find("userId = ?1 and serviceId = ?2 and currency = ?3 and id <> ?4 and status = ?5",
+                        io.quarkus.panache.common.Sort.descending("dueDate", "createdAt"), userId, serviceId, currency, excludeId, InvoiceStatus.CONFIRMED)
+                .page(0, limit).list().stream().map(mapper::toModel).toList();
+    }
+
+    @Override
     public Optional<Invoice> findByIdForUser(UUID userId, UUID invoiceId) {
         return repository.find("id = ?1 and userId = ?2", invoiceId, userId).firstResultOptional().map(mapper::toModel);
     }

@@ -49,6 +49,8 @@ public class ServiceDraftValidator {
                 .customerReference(blankToNull(draft.getCustomerReference()))
                 .notes(blankToNull(draft.getNotes()))
                 .paymentUrl(blankToNull(draft.getPaymentUrl()))
+                // El medio solo tiene sentido con débito automático
+                .autoDebitMethod(draft.isAutoDebit() ? blankToNull(draft.getAutoDebitMethod()) : null)
                 .metadata(draft.getMetadata() == null ? new HashMap<>() : draft.getMetadata())
                 .build();
     }

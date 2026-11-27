@@ -12,6 +12,7 @@ import org.acme.user.application.usecase.ProfileUseCase;
 import org.acme.user.infrastructure.rest.dto.AuthResponse;
 import org.acme.user.infrastructure.rest.dto.ChangePasswordRequest;
 import org.acme.user.infrastructure.rest.dto.PaymentWalletRequest;
+import org.acme.user.infrastructure.rest.dto.PriceIncreaseThresholdRequest;
 import org.acme.user.infrastructure.rest.dto.UpdateProfileRequest;
 import org.acme.user.infrastructure.rest.dto.UserResponse;
 import org.acme.user.infrastructure.rest.mapper.UserRestMapper;
@@ -62,6 +63,13 @@ public class UserResource {
     @Operation(summary = "Elegir la billetera para pagar facturas")
     public UserResponse paymentWallet(@NotNull PaymentWalletRequest request) {
         return mapper.toResponse(profile.setPaymentWallet(currentUser.id(), request.paymentWallet()));
+    }
+
+    @PUT
+    @Path("/price-increase-threshold")
+    @Operation(summary = "Desde qué % de aumento de una factura avisar")
+    public UserResponse priceIncreaseThreshold(@NotNull PriceIncreaseThresholdRequest request) {
+        return mapper.toResponse(profile.setPriceIncreaseThreshold(currentUser.id(), request.threshold()));
     }
 
     @PUT

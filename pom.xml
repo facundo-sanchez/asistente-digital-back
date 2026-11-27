@@ -188,6 +188,17 @@
             <groupId>io.quarkiverse.langchain4j</groupId>
             <artifactId>quarkus-langchain4j-ai-gemini</artifactId>
         </dependency>
+        <!-- Notificaciones push (Web Push con VAPID, módulo 15); la librería cifra con BouncyCastle -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
         <!-- Leer planillas de Excel (XLSX y XLS) para la IA documental (módulo 9) -->
         <dependency>
             <groupId>org.apache.poi</groupId>
