@@ -28,7 +28,7 @@ public class AutoDebitUseCase {
 
     private static final Logger LOG = Logger.getLogger(AutoDebitUseCase.class);
     /** Si la tarea no corrió unos días, recupera los débitos de esos días; nunca más atrás. */
-    static final int CATCH_UP_DAYS = 3;
+    static final int CATCH_UP_DAYS = org.acme.notification.application.usecase.AutoDebitWindow.DAYS;
     static final String NOTE = "Débito automático";
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("America/Argentina/Buenos_Aires");
 

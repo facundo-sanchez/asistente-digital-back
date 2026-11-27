@@ -112,8 +112,10 @@ public class GenerateNotificationsUseCase {
             }
         }
         for (ObligationSummary o : obligations.findDueBetween(userId, today.minusDays(OVERDUE_LOOKBACK), today.minusDays(1))) {
-            // Los de débito automático con importe los paga la tarea del débito: no son vencidos
-            if (unpaid(o) && !debitsAlone(autoDebit, o)) {
+            // Los de débito automático con importe los paga la tarea del débito en sus primeros días: no son vencidos.
+            // Más viejos (ej. la factura se cargó tarde) no se pagan solos: se avisan para que el usuario registre el pago
+            boolean debitPending = debitsAlone(autoDebit, o) && !o.obligation().getDueDate().isBefore(today.minusDays(AutoDebitWindow.DAYS));
+            if (unpaid(o) && !debitPending) {
                 created += everywhere(settings, userId, NotificationType.OBLIGATION_OVERDUE, "OBLIGATION_OVERDUE:" + o.obligation().getId(),
                         o.obligation().getId(), null, o.obligation().getTitle(), "Se venció y no está pago" + amountText(o));
             }

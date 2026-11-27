@@ -74,19 +74,22 @@ class GenerateNotificationsUseCaseTest {
     }
 
     @Test
-    void conDebitoAutomaticoAvisaQueSeDebitaYNoComoVencido() {
+    void conDebitoAutomaticoAvisaQueSeDebitaYSoloLoCargadoTardeComoVencido() {
         UUID luz = services.save(org.acme.service.domain.model.Service.builder().userId(ana).providerId(UUID.randomUUID()).name("Luz")
                 .category(org.acme.shared.domain.model.ServiceCategory.values()[0]).autoDebit(true).build()).getId();
         UUID tomorrow = obligation("Luz", "40000", LocalDate.of(2026, 11, 27));
         UUID inThreeDays = obligation("Luz diciembre", "40000", LocalDate.of(2026, 11, 29));
-        UUID past = obligation("Luz pasada", "40000", LocalDate.of(2026, 11, 20));
-        for (UUID id : List.of(tomorrow, inThreeDays, past)) {
+        UUID yesterday = obligation("Luz ayer", "40000", LocalDate.of(2026, 11, 25));
+        UUID loadedLate = obligation("Luz vieja", "40000", LocalDate.of(2026, 11, 10));
+        for (UUID id : List.of(tomorrow, inThreeDays, yesterday, loadedLate)) {
             obligations.rows.get(id).setServiceId(luz);
         }
 
-        assertEquals(2, at("2026-11-26T12:00:00Z").generate(), "solo el de mañana, en la app y por email");
+        assertEquals(4, at("2026-11-26T12:00:00Z").generate(), "el de mañana y el viejo, en la app y por email");
+        List<UUID> overdue = notifications.rows.stream().filter(n -> n.getNotificationType() == NotificationType.OBLIGATION_OVERDUE)
+                .map(Notification::getObligationId).distinct().toList();
+        assertEquals(List.of(loadedLate), overdue, "el de ayer lo paga el débito; el cargado tarde se avisa como vencido");
         assertEquals("Se debita mañana · $ 40.000,00", notifications.rows.getFirst().getMessage().replace(' ', ' '));
-        assertTrue(notifications.rows.stream().noneMatch(n -> n.getNotificationType() == NotificationType.OBLIGATION_OVERDUE));
     }
 
     @Test
