@@ -24,10 +24,12 @@ public class AssistantToolbox {
     final CardReportUseCase cards;
     final DocumentQueryUseCase documents;
     final ObjectMapper json;
+    final org.acme.loan.application.usecase.LoanUseCase loans;
 
     @Inject
     public AssistantToolbox(ObligationQueryUseCase obligations, InvoiceQueryUseCase invoices, ServiceQueryUseCase services,
-                            DashboardUseCase dashboard, CardReportUseCase cards, DocumentQueryUseCase documents, ObjectMapper json) {
+                            DashboardUseCase dashboard, CardReportUseCase cards, DocumentQueryUseCase documents, ObjectMapper json,
+                            org.acme.loan.application.usecase.LoanUseCase loans) {
         this.obligations = obligations;
         this.invoices = invoices;
         this.services = services;
@@ -35,6 +37,7 @@ public class AssistantToolbox {
         this.cards = cards;
         this.documents = documents;
         this.json = json;
+        this.loans = loans;
     }
 
     public AssistantTools forUser(UUID userId, LocalDate today) {

@@ -5,5 +5,6 @@ public enum ReferenceType {
     OBLIGATION,
     INVOICE,
     SERVICE,
-    DOCUMENT
+    DOCUMENT,
+    LOAN
 }

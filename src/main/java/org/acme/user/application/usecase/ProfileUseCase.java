@@ -59,6 +59,13 @@ public class ProfileUseCase {
         return users.save(user);
     }
 
+    @Transactional
+    public User setEmailCheckInterval(UUID userId, org.acme.user.domain.model.EmailCheckInterval interval) {
+        User user = get(userId);
+        user.setEmailCheckInterval(interval);
+        return users.save(user);
+    }
+
     private static void validate(UpdateProfileCommand command) {
         try {
             ZoneId.of(command.timezone());

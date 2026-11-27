@@ -21,6 +21,9 @@ public class Obligation {
     private UUID invoiceId;
     private UUID assetId;
     private UUID recurrenceId;
+    /** Si es la cuota de un préstamo (módulo 13): el préstamo y su número de cuota. */
+    private UUID loanId;
+    private Integer installmentNumber;
     private String title;
     private String description;
     @Builder.Default
@@ -45,6 +48,10 @@ public class Obligation {
     public void applyPaidAmount(BigDecimal paid, Instant now) {
         if (status == ObligationStatus.CANCELLED) {
             throw new ServiceException("La obligación está cancelada");
+        }
+        if (paid.signum() > 0) {
+            // Pagarlo confirma el importe: deja de ser estimado (la base no admite estimado y pagado)
+            estimated = false;
         }
         if (paid.signum() <= 0) {
             status = ObligationStatus.PENDING;

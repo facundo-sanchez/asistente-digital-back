@@ -32,4 +32,7 @@ public interface ObligationRepository {
 
     /** Los que vencen entre from y to (inclusive), sin los cancelados. */
     List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to);
+
+    /** Las cuotas de un préstamo, de la primera a la última. */
+    List<ObligationSummary> findByLoan(UUID userId, UUID loanId);
 }

@@ -21,5 +21,6 @@ public record UserResponse(
         UserRole role,
         @Schema(description = "Billetera para pagar facturas (null: ninguna)") PaymentWallet paymentWallet,
         @Schema(description = "Desde qué % de aumento de una factura se avisa", example = "20") int priceIncreaseThreshold,
+        @Schema(description = "Cada cuánto se revisa su correo") org.acme.user.domain.model.EmailCheckInterval emailCheckInterval,
         Instant createdAt
 ) {}

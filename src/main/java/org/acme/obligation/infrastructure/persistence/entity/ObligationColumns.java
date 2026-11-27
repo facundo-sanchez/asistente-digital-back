@@ -40,6 +40,12 @@ public abstract class ObligationColumns {
     @Column(name = "recurrence_id")
     private UUID recurrenceId;
 
+    @Column(name = "loan_id")
+    private UUID loanId;
+
+    @Column(name = "installment_number")
+    private Integer installmentNumber;
+
     @Column(name = "title", nullable = false, length = 200)
     private String title;
 

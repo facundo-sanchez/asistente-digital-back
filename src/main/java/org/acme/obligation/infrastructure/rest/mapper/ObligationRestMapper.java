@@ -26,6 +26,8 @@ public interface ObligationRestMapper {
     @Mapping(target = "userId", ignore = true)
     @Mapping(target = "invoiceId", ignore = true)
     @Mapping(target = "recurrenceId", ignore = true)
+    @Mapping(target = "loanId", ignore = true)
+    @Mapping(target = "installmentNumber", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "estimated", ignore = true)
     @Mapping(target = "cancelledAt", ignore = true)

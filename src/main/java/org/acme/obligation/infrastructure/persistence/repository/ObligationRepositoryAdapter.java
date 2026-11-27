@@ -110,6 +110,12 @@ public class ObligationRepositoryAdapter implements ObligationRepository {
     }
 
     @Override
+    public List<ObligationSummary> findByLoan(UUID userId, UUID loanId) {
+        return view.list("userId = ?1 and loanId = ?2", io.quarkus.panache.common.Sort.by("installmentNumber"), userId, loanId)
+                .stream().map(mapper::toSummary).toList();
+    }
+
+    @Override
     public List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to) {
         return view.list("userId = ?1 and dueDate >= ?2 and dueDate <= ?3 and status <> ?4", userId, from, to, ObligationStatus.CANCELLED)
                 .stream().map(mapper::toSummary).toList();

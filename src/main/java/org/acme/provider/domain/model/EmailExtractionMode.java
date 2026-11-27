@@ -6,5 +6,7 @@ package org.acme.provider.domain.model;
  * (ej. BBVA: el resumen de tarjeta no viene adjunto, los totales están en el cuerpo).
  */
 public enum EmailExtractionMode {
-    ATTACHMENT, EMAIL_BODY
+    ATTACHMENT, EMAIL_BODY,
+    /** Aviso de cuota de préstamo en el cuerpo (ej. BBVA): actualiza la cuota, no importa documento (módulo 13.5). */
+    LOAN_NOTICE
 }
