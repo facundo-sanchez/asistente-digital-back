@@ -21,8 +21,8 @@ public record LoanRequest(
         @PositiveOrZero @Schema(description = "TNA en %", example = "71") BigDecimal annualRate,
         LocalDate disbursementDate,
         @Min(value = 1, message = "Al menos 1 cuota") @Max(value = 360, message = "Hasta 360 cuotas") int installmentsCount,
-        @NotNull(message = "Poné el importe de la cuota") @Positive(message = "El importe tiene que ser mayor a cero")
-        @Schema(example = "584292.14") BigDecimal installmentAmount,
+        @Positive(message = "El importe tiene que ser mayor a cero")
+        @Schema(description = "Obligatorio salvo tasa fija con capital y TNA (se calcula)", example = "584292.14") BigDecimal installmentAmount,
         @NotNull(message = "Poné la fecha de la primera cuota") LocalDate firstDueDate,
         @PositiveOrZero @Schema(description = "Cuotas ya pagadas antes de cargarlo") int paidInstallments,
         UUID contractDocumentId,

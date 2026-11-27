@@ -25,7 +25,8 @@ public class LoanResponseMapper {
                 l.getRateType(), l.getAnnualRate(), l.getDisbursementDate(), l.getInstallmentsCount(), l.getFirstDueDate(), l.getContractDocumentId(),
                 l.getBankBalance(), l.getBankBalanceDate(), l.getNotes(), v.effectiveStatus(), l.getCancelReason(), v.paidCount(), v.remaining(),
                 v.totalPaid(), v.next().map(this::installment).orElse(null),
-                v.installments().isEmpty() ? null : v.installments().getLast().obligation().getDueDate(), installments, l.getCreatedAt());
+                v.installments().isEmpty() ? null : v.installments().getLast().obligation().getDueDate(), installments,
+                withInstallments ? v.schedule() : List.of(), l.getCreatedAt());
     }
 
     private ObligationResponse installment(ObligationSummary s) {

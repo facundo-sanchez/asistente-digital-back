@@ -37,5 +37,7 @@ public record LoanResponse(
         @Schema(description = "Próxima cuota pendiente; null si no hay") ObligationResponse next,
         @Schema(description = "Vencimiento de la última cuota") LocalDate lastDueDate,
         List<ObligationResponse> installments,
+        @Schema(description = "Cronograma calculado (tasa fija): interés, capital, IVA, importe sin sellados y saldo de capital; vacío si no se puede")
+        List<org.acme.loan.domain.model.ScheduleRow> schedule,
         Instant createdAt
 ) {}

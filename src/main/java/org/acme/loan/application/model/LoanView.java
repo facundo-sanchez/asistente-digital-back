@@ -1,6 +1,9 @@
 package org.acme.loan.application.model;
 
+import org.acme.loan.domain.model.FrenchSchedule;
 import org.acme.loan.domain.model.Loan;
+import org.acme.loan.domain.model.LoanRateType;
+import org.acme.loan.domain.model.ScheduleRow;
 import org.acme.loan.domain.model.LoanStatus;
 import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.obligation.domain.model.ObligationSummary;
@@ -11,6 +14,12 @@ import java.util.Optional;
 
 /** Un préstamo con sus cuotas y lo que sale de ellas: cuántas se pagaron, cuánto falta y la próxima. */
 public record LoanView(Loan loan, List<ObligationSummary> installments) {
+
+    /** Cronograma calculado (tasa fija con capital y TNA); vacío si no se puede calcular. */
+    public List<ScheduleRow> schedule() {
+        return loan.getRateType() == LoanRateType.FIXED
+                ? FrenchSchedule.of(loan.getPrincipal(), loan.getAnnualRate(), loan.getInstallmentsCount()) : List.of();
+    }
 
     public long paidCount() {
         return installments.stream().filter(i -> i.effectiveStatus() == EffectiveObligationStatus.PAID).count();

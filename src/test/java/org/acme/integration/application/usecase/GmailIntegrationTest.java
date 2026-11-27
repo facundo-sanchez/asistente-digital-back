@@ -55,7 +55,8 @@ class GmailIntegrationTest {
         GmailAccess access = new GmailAccess(gmail, integrations, credentials, cipher, alerts::add, clock);
         connect = new ConnectGmailUseCase(gmail, integrations, credentials, processed, cipher, new TestAppSettings(new TestGoogleSettings(true)),
                 new TestIntegrationSettings(), clock);
-        sync = new GmailSyncUseCase(gmail, access, integrations, processed, userId -> RULES, services, importer, new TestIntegrationSettings(), clock);
+        sync = new GmailSyncUseCase(gmail, access, integrations, processed, userId -> RULES, services, importer, new TestIntegrationSettings(),
+                (userId, providerId, notice) -> null, new org.acme.user.application.usecase.InMemoryUserRepository(clock), clock);
     }
 
     @Test
@@ -120,7 +121,8 @@ class GmailIntegrationTest {
         gmail.refreshRevoked = true;
         Clock later = Clock.fixed(Instant.parse("2026-11-26T15:00:00Z"), ZoneOffset.UTC);
         GmailSyncUseCase laterSync = new GmailSyncUseCase(gmail, new GmailAccess(gmail, integrations, credentials, new PlainTokenCipher(), alerts::add, later),
-                integrations, processed, userId -> RULES, services, importer, new TestIntegrationSettings(), later);
+                integrations, processed, userId -> RULES, services, importer, new TestIntegrationSettings(),
+                (userId, providerId, notice) -> null, new org.acme.user.application.usecase.InMemoryUserRepository(later), later);
 
         laterSync.syncAll();
 

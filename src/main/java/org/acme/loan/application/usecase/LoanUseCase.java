@@ -9,7 +9,10 @@ import org.acme.domain.exceptions.ServiceException;
 import org.acme.loan.application.model.LoanView;
 import org.acme.loan.application.model.NewLoan;
 import org.acme.loan.application.port.output.LoanRepository;
+import org.acme.loan.domain.model.FrenchSchedule;
 import org.acme.loan.domain.model.Loan;
+import org.acme.loan.domain.model.LoanRateType;
+import org.acme.loan.domain.model.ScheduleRow;
 import org.acme.loan.domain.model.LoanStatus;
 import org.acme.obligation.application.port.output.ObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
@@ -54,7 +57,10 @@ public class LoanUseCase {
     public LoanView create(UUID userId, NewLoan request) {
         Loan draft = clean(request.loan());
         validate(userId, draft, null);
-        if (request.installmentAmount() == null || request.installmentAmount().signum() <= 0) {
+        // Tasa fija con capital y TNA: cada cuota con su importe calculado (sistema francés, sin sellados)
+        List<ScheduleRow> schedule = draft.getRateType() == LoanRateType.FIXED
+                ? FrenchSchedule.of(draft.getPrincipal(), draft.getAnnualRate(), draft.getInstallmentsCount()) : List.of();
+        if (schedule.isEmpty() && (request.installmentAmount() == null || request.installmentAmount().signum() <= 0)) {
             throw new ServiceException("Poné el importe de la cuota");
         }
         if (request.paidInstallments() < 0 || request.paidInstallments() >= draft.getInstallmentsCount()) {
@@ -64,13 +70,14 @@ public class LoanUseCase {
         List<LocalDate> dates = installmentDates(loan.getFirstDueDate(), loan.getInstallmentsCount());
         LocalDate today = LocalDate.now(clock);
         for (int n = 1; n <= dates.size(); n++) {
+            BigDecimal amount = schedule.isEmpty() ? request.installmentAmount() : schedule.get(n - 1).amount();
             ObligationSummary installment = obligations.save(Obligation.builder()
                     .userId(userId)
                     .loanId(loan.getId())
                     .installmentNumber(n)
                     .title(title(loan, n))
                     .obligationType(ObligationType.LOAN)
-                    .amount(request.installmentAmount())
+                    .amount(amount)
                     .currency(loan.getCurrency())
                     .dueDate(dates.get(n - 1))
                     // El importe real lo pone el comprobante o el aviso del banco
@@ -80,7 +87,7 @@ public class LoanUseCase {
                 LocalDate due = installment.obligation().getDueDate();
                 payments.register(userId, Payment.builder()
                         .obligationId(installment.obligation().getId())
-                        .amount(request.installmentAmount())
+                        .amount(amount)
                         .currency(loan.getCurrency())
                         .paymentDate(due.isAfter(today) ? today : due)
                         .paymentMethod(PaymentMethod.OTHER)

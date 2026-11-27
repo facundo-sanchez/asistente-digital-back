@@ -67,6 +67,18 @@ class LoanUseCaseTest {
     }
 
     @Test
+    void conTasaFijaCadaCuotaTieneSuImporteCalculado() {
+        NewLoan request = bbva(30, 9);
+        Loan fixed = request.loan().toBuilder().rateType(org.acme.loan.domain.model.LoanRateType.FIXED).annualRate(new BigDecimal("71")).build();
+
+        LoanView view = loans.create(ana, new NewLoan(fixed, null, 9));
+
+        assertEquals(0, new BigDecimal("578206.57").compareTo(view.installments().get(9).obligation().getAmount()));
+        assertTrue(view.installments().get(10).obligation().getAmount().compareTo(view.installments().get(9).obligation().getAmount()) < 0);
+        assertEquals(30, view.schedule().size());
+    }
+
+    @Test
     void validaCuotasYaPagadasYNumeroRepetido() {
         assertThrows(ServiceException.class, () -> loans.create(ana, bbva(12, 12)));
         loans.create(ana, bbva(30, 0));

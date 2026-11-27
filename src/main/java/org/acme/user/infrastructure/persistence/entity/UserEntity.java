@@ -55,6 +55,10 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_check_interval", nullable = false, length = 20)
+    private org.acme.user.domain.model.EmailCheckInterval emailCheckInterval = org.acme.user.domain.model.EmailCheckInterval.EVERY_15_MINUTES;
+
     @Column(name = "price_increase_threshold", nullable = false)
     private int priceIncreaseThreshold = org.acme.user.domain.model.User.DEFAULT_PRICE_INCREASE_THRESHOLD;
 

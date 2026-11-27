@@ -73,6 +73,13 @@ public class UserResource {
     }
 
     @PUT
+    @Path("/email-check-interval")
+    @Operation(summary = "Cada cuánto revisar el correo (Gmail)")
+    public UserResponse emailCheckInterval(@jakarta.validation.Valid @NotNull org.acme.user.infrastructure.rest.dto.EmailCheckIntervalRequest request) {
+        return mapper.toResponse(profile.setEmailCheckInterval(currentUser.id(), request.interval()));
+    }
+
+    @PUT
     @Path("/password")
     @Operation(summary = "Cambiar la contraseña",
             description = "Cierra las demás sesiones y devuelve una sesión nueva")

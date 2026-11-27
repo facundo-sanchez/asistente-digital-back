@@ -1,5 +1,13 @@
 package org.acme.integration.application.usecase;
 
+import org.acme.integration.application.model.LoanNotice;
+import org.acme.integration.application.port.output.LoanNotices;
+import org.acme.user.application.port.output.UserRepository;
+import org.acme.user.domain.model.EmailCheckInterval;
+import org.acme.user.domain.model.User;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.acme.domain.exceptions.ConflictException;
@@ -68,12 +76,14 @@ public class GmailSyncUseCase {
     private final ServiceRepository services;
     private final DocumentImporter importer;
     private final IntegrationSettings settings;
+    private final LoanNotices loanNotices;
+    private final UserRepository users;
     private final Clock clock;
 
     @Inject
     public GmailSyncUseCase(GmailClient gmail, GmailAccess access, IntegrationRepository integrations, ProcessedItemRepository processed,
                             EmailRuleRepository rules, ServiceRepository services, DocumentImporter importer, IntegrationSettings settings,
-                            Clock clock) {
+                            LoanNotices loanNotices, UserRepository users, Clock clock) {
         this.gmail = gmail;
         this.access = access;
         this.integrations = integrations;
@@ -82,17 +92,48 @@ public class GmailSyncUseCase {
         this.services = services;
         this.importer = importer;
         this.settings = settings;
+        this.loanNotices = loanNotices;
+        this.users = users;
         this.clock = clock;
     }
 
-    /** Todas las cuentas activas. Una con problemas no frena a las demás. */
+    /** Las cuentas activas a las que ya les toca según la frecuencia de su usuario (13.6). Una con problemas no frena a las demás. */
     public void syncAll() {
+        ZonedDateTime now = ZonedDateTime.now(clock);
         for (Integration integration : integrations.findActive(IntegrationProvider.GMAIL)) {
+            // Sin el usuario (no debería pasar: se borran juntos), la frecuencia por defecto
+            User user = users.findById(integration.getUserId()).orElseGet(User::new);
+            if (!due(user.getEmailCheckInterval(), integration.getLastSyncAt(), now.withZoneSameInstant(zone(user)))) {
+                continue;
+            }
             try {
                 sync(integration);
             } catch (RuntimeException e) {
                 LOG.errorf("Falló la sincronización de Gmail %s: %s", integration.getId(), e.getClass().getSimpleName());
             }
+        }
+    }
+
+    /**
+     * Si a la cuenta ya le toca otra revisión. La tarea corre cada 15 minutos: se deja un minuto de margen para no
+     * saltear una vuelta. DAILY: una vez por día desde las 8 (antes de los avisos de las 9). MANUAL: nunca sola.
+     */
+    static boolean due(EmailCheckInterval interval, Instant lastSync, ZonedDateTime now) {
+        if (lastSync == null) {
+            return interval != EmailCheckInterval.MANUAL;
+        }
+        return switch (interval) {
+            case MANUAL -> false;
+            case DAILY -> now.getHour() >= 8 && lastSync.atZone(now.getZone()).toLocalDate().isBefore(now.toLocalDate());
+            default -> !lastSync.plus(interval.every()).minus(Duration.ofMinutes(1)).isAfter(now.toInstant());
+        };
+    }
+
+    private static ZoneId zone(User user) {
+        try {
+            return ZoneId.of(user.getTimezone());
+        } catch (RuntimeException e) {
+            return ZoneId.of("America/Argentina/Buenos_Aires");
         }
     }
 
@@ -180,6 +221,9 @@ public class GmailSyncUseCase {
         }
         EmailRule rule = match.get();
         UUID userId = integration.getUserId();
+        if (rule.extractionMode() == EmailExtractionMode.LOAN_NOTICE) {
+            return loanNotice(integration, message, rule);
+        }
         UUID serviceId = service(userId, rule, message);
 
         List<GmailAttachment> attachments = EmailRules.readableAttachments(rule, message);
@@ -266,6 +310,18 @@ public class GmailSyncUseCase {
     }
 
     /** El email como texto para la IA: de quién, asunto, fecha y cuerpo. */
+    /** Aviso de cuota de préstamo (13.5): actualiza importe y fecha de la cuota; no importa documento ni pasa por la IA. */
+    private int loanNotice(Integration integration, GmailMessage message, EmailRule rule) {
+        Optional<LoanNotice> notice = LoanNoticeParser.parse(message.bodyText());
+        if (notice.isEmpty()) {
+            record(integration, message, "", rule, null, null, ProcessedItemResult.DISCARDED, "LOAN_NOTICE_UNREADABLE");
+            return 0;
+        }
+        String reason = loanNotices.apply(integration.getUserId(), rule.providerId(), notice.get());
+        record(integration, message, "", rule, null, null, reason == null ? ProcessedItemResult.IMPORTED : ProcessedItemResult.DISCARDED, reason);
+        return 0;
+    }
+
     static String emailText(GmailMessage message) {
         return "De: " + message.sender() + "\nAsunto: " + message.subject() + "\nFecha: " + message.receivedAt() + "\n\n" + message.bodyText();
     }
