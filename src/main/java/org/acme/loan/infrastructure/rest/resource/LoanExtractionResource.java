@@ -32,7 +32,7 @@ public class LoanExtractionResource {
     LoanExtractionUseCase extractions;
 
     @Inject
-    LoanResource loans;
+    org.acme.loan.infrastructure.rest.mapper.LoanResponseMapper mapper;
 
     @Inject
     CurrentUser currentUser;
@@ -55,7 +55,7 @@ public class LoanExtractionResource {
     @Path("/receipt/{id}/confirm")
     @Operation(summary = "Confirmar el comprobante de pago", description = "Fija el importe de la cuota, registra el pago con el comprobante y el saldo del banco")
     public LoanResponse confirm(@PathParam("id") UUID id, @Valid @NotNull LoanReceiptConfirmationRequest r) {
-        return loans.toResponse(extractions.confirmReceipt(currentUser.id(), id,
+        return mapper.toResponse(extractions.confirmReceipt(currentUser.id(), id,
                 new LoanReceiptConfirmation(r.loanId(), r.installmentNumber(), r.amount(), r.paymentDate(), r.newBalance())), true);
     }
 

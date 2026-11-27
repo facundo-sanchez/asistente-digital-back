@@ -14,7 +14,7 @@ import org.acme.loan.domain.model.Loan;
 import org.acme.loan.infrastructure.rest.dto.*;
 import org.acme.obligation.domain.model.ObligationSummary;
 import org.acme.obligation.infrastructure.rest.dto.ObligationResponse;
-import org.acme.obligation.infrastructure.rest.mapper.ObligationRestMapper;
+import org.acme.loan.infrastructure.rest.mapper.LoanResponseMapper;
 import org.acme.shared.infrastructure.security.CurrentUser;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
@@ -39,7 +39,7 @@ public class LoanResource {
     org.acme.loan.application.usecase.LoanExtractionUseCase extractions;
 
     @Inject
-    ObligationRestMapper obligations;
+    LoanResponseMapper mapper;
 
     @Inject
     CurrentUser currentUser;
@@ -47,7 +47,7 @@ public class LoanResource {
     @GET
     @Operation(summary = "Préstamos", description = "Con cuotas pagadas, lo que falta y la próxima cuota")
     public List<LoanResponse> list() {
-        return loans.list(currentUser.id()).stream().map(v -> toResponse(v, false)).toList();
+        return loans.list(currentUser.id()).stream().map(v -> mapper.toResponse(v, false)).toList();
     }
 
     @POST
@@ -60,14 +60,14 @@ public class LoanResource {
         NewLoan request = new NewLoan(loan, r.installmentAmount(), r.paidInstallments());
         LoanView view = r.extractionId() == null ? loans.create(currentUser.id(), request)
                 : extractions.createFromContract(currentUser.id(), r.extractionId(), request);
-        return Response.status(Response.Status.CREATED).entity(toResponse(view, true)).build();
+        return Response.status(Response.Status.CREATED).entity(mapper.toResponse(view, true)).build();
     }
 
     @GET
     @Path("/{id}")
     @Operation(summary = "Ficha del préstamo con su cronograma")
     public LoanResponse get(@PathParam("id") UUID id) {
-        return toResponse(loans.get(currentUser.id(), id), true);
+        return mapper.toResponse(loans.get(currentUser.id(), id), true);
     }
 
     @PUT
@@ -77,34 +77,20 @@ public class LoanResource {
         Loan changes = Loan.builder().lender(r.lender()).name(r.name()).loanNumber(r.loanNumber()).shortReference(r.shortReference())
                 .principal(r.principal()).rateType(r.rateType()).annualRate(r.annualRate()).disbursementDate(r.disbursementDate())
                 .contractDocumentId(r.contractDocumentId()).notes(r.notes()).build();
-        return toResponse(loans.update(currentUser.id(), id, changes), true);
+        return mapper.toResponse(loans.update(currentUser.id(), id, changes), true);
     }
 
     @PATCH
     @Path("/{id}/installments/{number}")
     @Operation(summary = "Cambiar el importe de una cuota pendiente", description = "Una cuota con pagos no se edita")
     public LoanResponse changeInstallment(@PathParam("id") UUID id, @PathParam("number") int number, @Valid @NotNull InstallmentAmountRequest r) {
-        return toResponse(loans.changeInstallment(currentUser.id(), id, number, r.amount()), true);
+        return mapper.toResponse(loans.changeInstallment(currentUser.id(), id, number, r.amount()), true);
     }
 
     @POST
     @Path("/{id}/cancel")
     @Operation(summary = "Cancelar el préstamo", description = "Cancela las cuotas pendientes sin pagos; las pagadas quedan")
     public LoanResponse cancel(@PathParam("id") UUID id, @Valid CancelLoanRequest r) {
-        return toResponse(loans.cancel(currentUser.id(), id, r == null ? null : r.reason()), true);
-    }
-
-    LoanResponse toResponse(LoanView v, boolean withInstallments) {
-        Loan l = v.loan();
-        List<ObligationResponse> installments = withInstallments ? v.installments().stream().map(this::installment).toList() : List.of();
-        return new LoanResponse(l.getId(), l.getLender(), l.getName(), l.getLoanNumber(), l.getShortReference(), l.getCurrency(), l.getPrincipal(),
-                l.getRateType(), l.getAnnualRate(), l.getDisbursementDate(), l.getInstallmentsCount(), l.getFirstDueDate(), l.getContractDocumentId(),
-                l.getBankBalance(), l.getBankBalanceDate(), l.getNotes(), v.effectiveStatus(), l.getCancelReason(), v.paidCount(), v.remaining(),
-                v.totalPaid(), v.next().map(this::installment).orElse(null),
-                v.installments().isEmpty() ? null : v.installments().getLast().obligation().getDueDate(), installments, l.getCreatedAt());
-    }
-
-    private ObligationResponse installment(ObligationSummary s) {
-        return obligations.toResponse(s, null, null);
+        return mapper.toResponse(loans.cancel(currentUser.id(), id, r == null ? null : r.reason()), true);
     }
 }
