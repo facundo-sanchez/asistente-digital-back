@@ -60,6 +60,8 @@ class LoanUseCaseTest {
         assertTrue(tenth.isEstimated());
         assertEquals(9, view.paidCount());
         assertEquals(EffectiveObligationStatus.PAID, view.installments().get(8).effectiveStatus());
+        // La base no admite estimado y pagado (ck_obligations_estimated_paid): pagar confirma el importe
+        assertFalse(view.installments().get(8).obligation().isEstimated());
         assertEquals(0, new BigDecimal("584292.14").multiply(BigDecimal.valueOf(21)).compareTo(view.remaining()));
         assertEquals(10, view.next().orElseThrow().obligation().getInstallmentNumber());
     }

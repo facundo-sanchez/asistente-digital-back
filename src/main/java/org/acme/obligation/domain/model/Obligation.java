@@ -49,6 +49,10 @@ public class Obligation {
         if (status == ObligationStatus.CANCELLED) {
             throw new ServiceException("La obligación está cancelada");
         }
+        if (paid.signum() > 0) {
+            // Pagarlo confirma el importe: deja de ser estimado (la base no admite estimado y pagado)
+            estimated = false;
+        }
         if (paid.signum() <= 0) {
             status = ObligationStatus.PENDING;
             paidAt = null;
