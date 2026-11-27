@@ -6,6 +6,7 @@ import org.acme.document.application.port.output.DocumentRepository;
 import org.acme.document.domain.model.Document;
 import org.acme.notification.application.model.NotificationSettings;
 import org.acme.notification.application.port.output.NotificationRepository;
+import org.acme.notification.application.port.output.PushSubscriptionRepository;
 import org.acme.notification.domain.model.Notification;
 import org.acme.notification.domain.model.NotificationChannel;
 import org.acme.notification.domain.model.NotificationStatus;
@@ -53,18 +54,20 @@ public class GenerateNotificationsUseCase {
     private final DocumentRepository documents;
     private final UserRepository users;
     private final ServiceRepository services;
+    private final PushSubscriptionRepository push;
     private final Clock clock;
 
     @Inject
     public GenerateNotificationsUseCase(NotificationRepository notifications, NotificationPreferencesUseCase preferences,
                                         ObligationRepository obligations, DocumentRepository documents, UserRepository users,
-                                        ServiceRepository services, Clock clock) {
+                                        ServiceRepository services, PushSubscriptionRepository push, Clock clock) {
         this.notifications = notifications;
         this.preferences = preferences;
         this.obligations = obligations;
         this.documents = documents;
         this.users = users;
         this.services = services;
+        this.push = push;
         this.clock = clock;
     }
 
@@ -162,7 +165,13 @@ public class GenerateNotificationsUseCase {
         Notification notification = Notification.builder().userId(userId).notificationType(type).channel(channel)
                 .idempotencyKey(key + ":" + channel).obligationId(obligationId).documentId(documentId).integrationId(integrationId).title(title).message(message)
                 .scheduledAt(now).sentAt(web ? now : null).status(web ? NotificationStatus.SENT : NotificationStatus.PENDING).build();
-        return notifications.saveIfAbsent(notification) ? 1 : 0;
+        boolean created = notifications.saveIfAbsent(notification);
+        // Push sigue a los avisos de la app: cada uno nuevo sale también a los dispositivos suscriptos
+        if (created && web && push.existsForUser(userId)) {
+            notifications.saveIfAbsent(notification.toBuilder().id(null).channel(NotificationChannel.PUSH).idempotencyKey(key + ":" + NotificationChannel.PUSH)
+                    .sentAt(null).status(NotificationStatus.PENDING).build());
+        }
+        return created ? 1 : 0;
     }
 
     /** El umbral más chico que alcanza a daysLeft (ej. faltan 2 días → umbral 3). thresholds va de menor a mayor. */

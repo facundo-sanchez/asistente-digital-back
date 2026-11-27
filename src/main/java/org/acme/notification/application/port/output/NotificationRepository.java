@@ -28,4 +28,7 @@ public interface NotificationRepository {
 
     /** Emails pendientes con scheduledAt ya cumplido, los más viejos primero. */
     List<Notification> findDueEmails(Instant now, int limit);
+
+    /** Push pendientes cuyo momento ya llegó. */
+    List<Notification> findDuePush(Instant now, int limit);
 }

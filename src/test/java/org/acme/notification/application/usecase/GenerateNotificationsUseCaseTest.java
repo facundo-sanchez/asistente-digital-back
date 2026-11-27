@@ -5,6 +5,7 @@ import org.acme.document.domain.model.Document;
 import org.acme.notification.domain.model.Notification;
 import org.acme.notification.domain.model.NotificationChannel;
 import org.acme.notification.domain.model.NotificationPreference;
+import org.acme.notification.domain.model.NotificationStatus;
 import org.acme.notification.domain.model.NotificationType;
 import org.acme.obligation.application.usecase.InMemoryObligationRepository;
 import org.acme.obligation.domain.model.Obligation;
@@ -34,6 +35,7 @@ class GenerateNotificationsUseCaseTest {
     private InMemoryUserRepository users;
     private final org.acme.service.application.usecase.InMemoryServiceRepository services = new org.acme.service.application.usecase.InMemoryServiceRepository();
     private NotificationPreferencesUseCase preferences;
+    private final InMemoryPushSubscriptionRepository push = new InMemoryPushSubscriptionRepository();
     private UUID ana;
 
     @BeforeEach
@@ -48,7 +50,7 @@ class GenerateNotificationsUseCaseTest {
 
     /** 12:00 UTC = 9:00 en Buenos Aires. */
     private GenerateNotificationsUseCase at(String instant) {
-        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, services, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
+        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, services, push, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 
     @Test
@@ -85,6 +87,19 @@ class GenerateNotificationsUseCaseTest {
         assertEquals(2, at("2026-11-26T12:00:00Z").generate(), "solo el de mañana, en la app y por email");
         assertEquals("Se debita mañana · $ 40.000,00", notifications.rows.getFirst().getMessage().replace(' ', ' '));
         assertTrue(notifications.rows.stream().noneMatch(n -> n.getNotificationType() == NotificationType.OBLIGATION_OVERDUE));
+    }
+
+    @Test
+    void conUnDispositivoActivadoCadaAvisoDeLaAppTambienVaPorPush() {
+        push.save(org.acme.notification.domain.model.PushSubscription.builder().userId(ana).endpoint("https://push/celu").p256dh("k").auth("a").build());
+        obligation("Luz", "40000", LocalDate.of(2026, 11, 27));
+
+        at("2026-11-26T12:00:00Z").generate();
+        at("2026-11-26T13:00:00Z").generate();
+
+        List<Notification> pushes = notifications.rows.stream().filter(n -> n.getChannel() == NotificationChannel.PUSH).toList();
+        assertEquals(1, pushes.size(), "uno por aviso, sin repetir");
+        assertEquals(NotificationStatus.PENDING, pushes.getFirst().getStatus());
     }
 
     @Test
