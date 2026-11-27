@@ -76,6 +76,7 @@ En Google Cloud Console → Credenciales → tu ID de cliente OAuth, sumá las U
 
 ## 6. Antes de abrirla
 
-- Claves nuevas para todo: JWT, `INTEGRATIONS_KEY`, base de datos, Google, Gemini.
+- Claves nuevas para todo: JWT, `INTEGRATIONS_KEY`, base de datos, Google, Gemini y las de push (`npx web-push generate-vapid-keys`).
+- Notificaciones push y app instalable: necesitan HTTPS (Vercel y Caddy ya lo dan).
 - Gemini en el nivel gratuito: si el proyecto de la clave no tiene facturación, al llegar al tope responde error y no cobra.
 - Brevo: verificá el remitente (`SMTP_FROM`) para que los emails no caigan en spam.
