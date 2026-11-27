@@ -26,6 +26,11 @@ public class Provider {
     private List<String> emailDomains = new ArrayList<>();
     @Builder.Default
     private boolean active = true;
+    /**
+     * Solo en proveedores propios: dirección (info@nativaseguros.com.ar) o dominio (nativaseguros.com.ar) desde el que
+     * llegan sus facturas. Se guarda como una regla de email del proveedor, no en esta tabla.
+     */
+    private String invoiceSender;
     private Instant createdAt;
     private Instant updatedAt;
 

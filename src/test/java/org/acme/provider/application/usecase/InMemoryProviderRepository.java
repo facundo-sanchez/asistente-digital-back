@@ -63,9 +63,27 @@ public class InMemoryProviderRepository implements ProviderRepository {
         return rows.stream().anyMatch(p -> userId.equals(p.getUserId()) && code.equals(p.getCode()));
     }
 
+    final java.util.Map<UUID, String> senders = new java.util.HashMap<>();
+
+    @Override
+    public java.util.Optional<String> findInvoiceSender(UUID providerId) {
+        return java.util.Optional.ofNullable(senders.get(providerId));
+    }
+
+    @Override
+    public void saveInvoiceSender(UUID providerId, String sender) {
+        if (sender == null) senders.remove(providerId); else senders.put(providerId, sender);
+    }
+
     @Override
     public Provider save(Provider provider) {
-        return add(provider);
+        if (provider.getId() == null) {
+            return add(provider);
+        }
+        rows.removeIf(p -> p.getId().equals(provider.getId()));
+        Provider stored = provider.toBuilder().build();
+        rows.add(stored);
+        return stored;
     }
 
     @Override

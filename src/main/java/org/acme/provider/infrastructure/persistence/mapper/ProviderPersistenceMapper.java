@@ -13,6 +13,7 @@ import java.util.Map;
 
 @Mapper(config = MapStructConfig.class)
 public interface ProviderPersistenceMapper {
+    @org.mapstruct.Mapping(target = "invoiceSender", ignore = true)
     Provider toModel(ProviderEntity entity);
     ProviderEntity toEntity(Provider model);
 

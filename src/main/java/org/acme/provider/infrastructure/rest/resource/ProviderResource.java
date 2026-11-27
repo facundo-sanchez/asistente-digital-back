@@ -11,6 +11,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -85,5 +86,13 @@ public class ProviderResource {
     public Response create(@Valid @NotNull ProviderRequest request) {
         ProviderResponse body = mapper.toResponse(createProvider.create(currentUser.id(), mapper.toModel(request)));
         return Response.status(Response.Status.CREATED).entity(body).build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Editar un proveedor propio", description = "Nombre, categoría, sitio y remitente de facturas. 409 si es del catálogo")
+    public ProviderResponse update(@PathParam("id") UUID id, @Valid @NotNull ProviderRequest request) {
+        return mapper.toResponse(createProvider.update(currentUser.id(), id, mapper.toModel(request)));
     }
 }

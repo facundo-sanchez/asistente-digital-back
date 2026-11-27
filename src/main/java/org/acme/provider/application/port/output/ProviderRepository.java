@@ -30,6 +30,12 @@ public interface ProviderRepository {
     /** Inserta un proveedor propio. Devuelve el proveedor persistido. */
     Provider save(Provider provider);
 
+    /** El remitente de facturas de un proveedor propio (su regla de email), si tiene. */
+    java.util.Optional<String> findInvoiceSender(UUID providerId);
+
+    /** Crea, cambia o (con null) borra la regla de email de un proveedor propio. */
+    void saveInvoiceSender(UUID providerId, String sender);
+
     /** Nombre de cada proveedor pedido, por id (para mostrar junto a los servicios). */
     Map<UUID, String> findNames(Collection<UUID> providerIds);
 }
