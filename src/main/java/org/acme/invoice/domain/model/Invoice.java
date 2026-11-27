@@ -36,6 +36,8 @@ public class Invoice {
     /** Referencia técnica de la IA, no garantía de exactitud. */
     private BigDecimal confidenceScore;
     private Instant confirmedAt;
+    /** Cuánto subió (%) respecto del promedio de las últimas facturas del servicio; null si no pasó el umbral. */
+    private BigDecimal priceIncrease;
     private Instant createdAt;
     private Instant updatedAt;
 

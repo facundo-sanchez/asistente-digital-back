@@ -20,5 +20,6 @@ public record UserResponse(
         @Schema(example = "ARS") String defaultCurrency,
         UserRole role,
         @Schema(description = "Billetera para pagar facturas (null: ninguna)") PaymentWallet paymentWallet,
+        @Schema(description = "Desde qué % de aumento de una factura se avisa", example = "20") int priceIncreaseThreshold,
         Instant createdAt
 ) {}

@@ -55,6 +55,9 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    @Column(name = "price_increase_threshold", nullable = false)
+    private int priceIncreaseThreshold = org.acme.user.domain.model.User.DEFAULT_PRICE_INCREASE_THRESHOLD;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_wallet", length = 30)
     private org.acme.user.domain.model.PaymentWallet paymentWallet;

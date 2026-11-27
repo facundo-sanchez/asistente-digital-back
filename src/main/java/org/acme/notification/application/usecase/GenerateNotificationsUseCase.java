@@ -129,6 +129,16 @@ public class GenerateNotificationsUseCase {
                 null, document.getId(), "La IA leyó " + title(document), "Revisá los datos y confirmalos para que queden registrados");
     }
 
+    /** Una factura vino más cara que el promedio de las anteriores. Uno por factura. */
+    public void priceIncrease(UUID userId, UUID invoiceId, UUID obligationId, String serviceName, BigDecimal percent, BigDecimal amount,
+                              BigDecimal average, String currency) {
+        NumberFormat format = NumberFormat.getCurrencyInstance(ES_AR);
+        format.setCurrency(Currency.getInstance(currency));
+        everywhere(preferences.settings(userId), userId, NotificationType.PRICE_INCREASE, "PRICE_INCREASE:" + invoiceId, obligationId, null,
+                "Tu factura de " + serviceName + " subió " + percent.stripTrailingZeros().toPlainString().replace('.', ',') + " %",
+                format.format(amount) + " contra " + format.format(average) + " de promedio de las anteriores");
+    }
+
     /** Google ya no deja leer el correo: hay que volver a conectar la cuenta. */
     public void integrationDisconnected(UUID userId, UUID integrationId, String account) {
         String key = "INTEGRATION_DISCONNECTED:" + integrationId + ":" + Instant.now(clock).toEpochMilli();

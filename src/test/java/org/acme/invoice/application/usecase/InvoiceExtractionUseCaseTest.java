@@ -60,7 +60,7 @@ class InvoiceExtractionUseCaseTest {
         services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build());
         Clock clock = Clock.fixed(Instant.parse("2026-11-26T12:00:00Z"), ZoneOffset.UTC);
         var register = new RegisterInvoiceUseCase(invoices, new InMemoryObligationRepository(),
-                new InvoiceDraftValidator(services, documents, invoices), clock);
+                new InvoiceDraftValidator(services, documents, invoices), new PriceIncreaseCheck(invoices, new org.acme.user.application.usecase.InMemoryUserRepository(Clock.systemUTC()), (i, n, o, p, a2) -> {}), clock);
         useCase = new InvoiceExtractionUseCase(new ExtractionReviews(extractions, documents, new InMemoryProcessingJobRepository(), clock),
                 services, invoices, register, json, documentId -> java.util.Optional.empty());
     }
