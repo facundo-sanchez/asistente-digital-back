@@ -4,29 +4,25 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
+import org.acme.notification.application.PushSettings;
 import org.acme.notification.application.model.PushGoneException;
 import org.acme.notification.application.port.output.PushSender;
 import org.acme.notification.domain.model.PushSubscription;
 import org.acme.shared.application.AppSettings;
 import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import jakarta.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.Security;
-import java.util.Optional;
 
 /** Web Push con claves VAPID (librería web-push). Sin claves configuradas, push no está disponible. */
 @ApplicationScoped
 public class WebPushSender implements PushSender {
 
-    @ConfigProperty(name = "app.push.vapid-public-key")
-    Optional<String> publicKey;
-
-    @ConfigProperty(name = "app.push.vapid-private-key")
-    Optional<String> privateKey;
+    @Inject
+    PushSettings keys;
 
     @Inject
     AppSettings settings;
@@ -43,7 +39,7 @@ public class WebPushSender implements PushSender {
         }
         try {
             // El "subject" identifica a quien manda: la URL pública de la app
-            service = new PushService(publicKey.get(), privateKey.get(), settings.frontendUrl());
+            service = new PushService(keys.vapidPublicKey().get(), keys.vapidPrivateKey().get(), settings.frontendUrl());
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Las claves VAPID no son válidas", e);
         }
@@ -51,12 +47,12 @@ public class WebPushSender implements PushSender {
 
     @Override
     public boolean available() {
-        return publicKey.filter(k -> !k.isBlank()).isPresent() && privateKey.filter(k -> !k.isBlank()).isPresent();
+        return keys.vapidPublicKey().filter(k -> !k.isBlank()).isPresent() && keys.vapidPrivateKey().filter(k -> !k.isBlank()).isPresent();
     }
 
     @Override
     public String publicKey() {
-        return publicKey.orElse("");
+        return keys.vapidPublicKey().orElse("");
     }
 
     @Override
