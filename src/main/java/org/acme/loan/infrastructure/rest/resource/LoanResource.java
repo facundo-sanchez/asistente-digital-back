@@ -36,6 +36,9 @@ public class LoanResource {
     LoanUseCase loans;
 
     @Inject
+    org.acme.loan.application.usecase.LoanExtractionUseCase extractions;
+
+    @Inject
     ObligationRestMapper obligations;
 
     @Inject
@@ -54,7 +57,9 @@ public class LoanResource {
                 .currency(r.currency()).principal(r.principal()).rateType(r.rateType()).annualRate(r.annualRate())
                 .disbursementDate(r.disbursementDate()).installmentsCount(r.installmentsCount()).firstDueDate(r.firstDueDate())
                 .contractDocumentId(r.contractDocumentId()).notes(r.notes()).build();
-        LoanView view = loans.create(currentUser.id(), new NewLoan(loan, r.installmentAmount(), r.paidInstallments()));
+        NewLoan request = new NewLoan(loan, r.installmentAmount(), r.paidInstallments());
+        LoanView view = r.extractionId() == null ? loans.create(currentUser.id(), request)
+                : extractions.createFromContract(currentUser.id(), r.extractionId(), request);
         return Response.status(Response.Status.CREATED).entity(toResponse(view, true)).build();
     }
 
@@ -89,7 +94,7 @@ public class LoanResource {
         return toResponse(loans.cancel(currentUser.id(), id, r == null ? null : r.reason()), true);
     }
 
-    private LoanResponse toResponse(LoanView v, boolean withInstallments) {
+    LoanResponse toResponse(LoanView v, boolean withInstallments) {
         Loan l = v.loan();
         List<ObligationResponse> installments = withInstallments ? v.installments().stream().map(this::installment).toList() : List.of();
         return new LoanResponse(l.getId(), l.getLender(), l.getName(), l.getLoanNumber(), l.getShortReference(), l.getCurrency(), l.getPrincipal(),

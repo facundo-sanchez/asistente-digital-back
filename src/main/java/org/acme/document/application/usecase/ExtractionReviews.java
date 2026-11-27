@@ -44,7 +44,7 @@ public class ExtractionReviews {
     /** Una propuesta de otro usuario responde igual que una inexistente. */
     public AiExtractionResult find(UUID userId, UUID extractionId, String schemaVersion) {
         AiExtractionResult result = extractions.findByIdForUser(userId, extractionId).orElseThrow(() -> new NotFoundException("propuesta"));
-        if (!schemaVersion.equals(result.getSchemaVersion())) {
+        if (schemaVersion != null && !schemaVersion.equals(result.getSchemaVersion())) {
             throw new ServiceException(WRONG_TYPE);
         }
         return result;

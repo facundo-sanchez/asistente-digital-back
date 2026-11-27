@@ -75,6 +75,7 @@ public class AssistantTools {
                 case "pendingInstallments" -> pendingInstallments();
                 case "expiringDocuments" -> expiringDocuments();
                 case "searchDocuments" -> searchDocuments(args.path("text").asText(""));
+                case "loans" -> loans();
                 default -> Map.of("error", "No existe la herramienta " + request.name());
             };
             return box.json.writeValueAsString(result);
@@ -180,6 +181,28 @@ public class AssistantTools {
             item.put("vence", v.document().getExpiresOn());
             return item;
         }).toList(), page.totalElements());
+    }
+
+    @Tool("Préstamos que tomó el usuario: cuotas pagadas y pendientes, lo que falta pagar, saldo de capital según el banco y la próxima cuota")
+    public Object loans() {
+        return box.loans.list(userId).stream().map(v -> {
+            reference(ReferenceType.LOAN, v.loan().getId(), v.loan().getName() + " " + v.loan().getLender());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("prestamo", v.loan().getName());
+            item.put("entidad", v.loan().getLender());
+            item.put("estado", v.effectiveStatus());
+            item.put("moneda", v.loan().getCurrency());
+            item.put("cuotasPagadas", v.paidCount());
+            item.put("cuotasTotales", v.loan().getInstallmentsCount());
+            item.put("faltaPagarEstimado", v.remaining());
+            item.put("saldoCapitalBanco", v.loan().getBankBalance());
+            v.next().ifPresent(n -> {
+                item.put("proximaCuota", n.obligation().getInstallmentNumber());
+                item.put("proximoVencimiento", n.obligation().getDueDate());
+                item.put("proximoImporte", n.balance());
+            });
+            return item;
+        }).toList();
     }
 
     private Object obligationList(ObligationFilter filter) {

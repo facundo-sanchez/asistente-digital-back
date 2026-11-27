@@ -17,4 +17,6 @@ public interface LoanRepository {
 
     /** Si ya tiene otro préstamo con ese número (excludeId: el que se está editando). */
     boolean existsNumber(UUID userId, String loanNumber, UUID excludeId);
+
+    Optional<Loan> findByNumber(UUID userId, String loanNumber);
 }

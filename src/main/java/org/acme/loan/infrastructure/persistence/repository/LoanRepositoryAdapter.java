@@ -46,6 +46,11 @@ public class LoanRepositoryAdapter implements LoanRepository {
     }
 
     @Override
+    public Optional<Loan> findByNumber(UUID userId, String loanNumber) {
+        return repository.find("userId = ?1 and loanNumber = ?2", userId, loanNumber).firstResultOptional().map(mapper::toModel);
+    }
+
+    @Override
     public boolean existsNumber(UUID userId, String loanNumber, UUID excludeId) {
         return excludeId == null
                 ? repository.count("userId = ?1 and loanNumber = ?2", userId, loanNumber) > 0

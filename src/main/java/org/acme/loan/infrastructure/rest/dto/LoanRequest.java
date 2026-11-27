@@ -26,5 +26,6 @@ public record LoanRequest(
         @NotNull(message = "Poné la fecha de la primera cuota") LocalDate firstDueDate,
         @PositiveOrZero @Schema(description = "Cuotas ya pagadas antes de cargarlo") int paidInstallments,
         UUID contractDocumentId,
-        @Size(max = 2000) String notes
+        @Size(max = 2000) String notes,
+        @Schema(description = "Propuesta del comprobante de alta leído con IA, si se cargó desde ahí") UUID extractionId
 ) {}

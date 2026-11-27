@@ -27,6 +27,11 @@ public class InMemoryLoanRepository implements LoanRepository {
     }
 
     @Override
+    public Optional<Loan> findByNumber(UUID userId, String loanNumber) {
+        return rows.values().stream().filter(l -> l.getUserId().equals(userId) && loanNumber.equals(l.getLoanNumber())).findFirst();
+    }
+
+    @Override
     public boolean existsNumber(UUID userId, String loanNumber, UUID excludeId) {
         return rows.values().stream().anyMatch(l -> l.getUserId().equals(userId) && loanNumber.equals(l.getLoanNumber()) && !l.getId().equals(excludeId));
     }
