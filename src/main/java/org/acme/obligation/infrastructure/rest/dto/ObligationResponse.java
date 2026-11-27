@@ -20,6 +20,8 @@ public record ObligationResponse(
         UUID invoiceId,
         UUID assetId,
         UUID recurrenceId,
+        @Schema(description = "Cuota de un préstamo: el préstamo (null si no es cuota)") UUID loanId,
+        @Schema(description = "Número de cuota del préstamo") Integer installmentNumber,
         @Schema(example = "Luz diciembre") String title,
         String description,
         ObligationType obligationType,

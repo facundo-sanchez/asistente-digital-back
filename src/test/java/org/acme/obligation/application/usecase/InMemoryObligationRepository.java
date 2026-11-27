@@ -76,6 +76,12 @@ public class InMemoryObligationRepository implements ObligationRepository {
     }
 
     @Override
+    public List<ObligationSummary> findByLoan(UUID userId, UUID loanId) {
+        return rows.values().stream().filter(o -> o.getUserId().equals(userId) && loanId.equals(o.getLoanId()))
+                .sorted(Comparator.comparing(Obligation::getInstallmentNumber)).map(this::summary).toList();
+    }
+
+    @Override
     public List<ObligationSummary> findDueBetween(UUID userId, LocalDate from, LocalDate to) {
         return rows.values().stream()
                 .filter(o -> o.getUserId().equals(userId) && !o.getDueDate().isBefore(from) && !o.getDueDate().isAfter(to)

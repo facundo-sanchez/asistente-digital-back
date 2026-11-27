@@ -21,6 +21,9 @@ public class Obligation {
     private UUID invoiceId;
     private UUID assetId;
     private UUID recurrenceId;
+    /** Si es la cuota de un préstamo (módulo 13): el préstamo y su número de cuota. */
+    private UUID loanId;
+    private Integer installmentNumber;
     private String title;
     private String description;
     @Builder.Default
