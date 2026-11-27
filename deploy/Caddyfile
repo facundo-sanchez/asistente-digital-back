@@ -1,0 +1,19 @@
+# HTTPS automático (Let's Encrypt) para el dominio del backend, ej. api-asistente.duckdns.org
+{$API_DOMAIN} {
+	encode gzip
+
+	# Swagger, OpenAPI y los endpoints internos de Quarkus no se publican
+	@internal path /asistente-digital-back/api/v1/swagger-ui* /asistente-digital-back/api/v1/openapi* /asistente-digital-back/api/v1/q/*
+	respond @internal 404
+
+	# Solo la API; el resto del dominio no existe
+	@api path /asistente-digital-back/*
+	handle @api {
+		# Sin buffer: las respuestas del asistente llegan de a partes (SSE)
+		reverse_proxy backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	respond 404
+}

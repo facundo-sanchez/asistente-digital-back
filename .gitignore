@@ -49,3 +49,7 @@ nb-configuration.xml
 
 # Archivos subidos en desarrollo
 /data/
+
+# Despliegue: variables y claves de produccion
+deploy/.env.prod
+deploy/secrets/
