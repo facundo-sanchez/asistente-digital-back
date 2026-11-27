@@ -32,6 +32,7 @@ class GenerateNotificationsUseCaseTest {
     private InMemoryObligationRepository obligations;
     private InMemoryDocumentRepository documents;
     private InMemoryUserRepository users;
+    private final org.acme.service.application.usecase.InMemoryServiceRepository services = new org.acme.service.application.usecase.InMemoryServiceRepository();
     private NotificationPreferencesUseCase preferences;
     private UUID ana;
 
@@ -47,7 +48,7 @@ class GenerateNotificationsUseCaseTest {
 
     /** 12:00 UTC = 9:00 en Buenos Aires. */
     private GenerateNotificationsUseCase at(String instant) {
-        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
+        return new GenerateNotificationsUseCase(notifications, preferences, obligations, documents, users, services, Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 
     @Test
@@ -68,6 +69,22 @@ class GenerateNotificationsUseCaseTest {
 
         assertEquals(2, at("2026-11-28T12:00:00Z").generate(), "el día del vencimiento sale el umbral 0");
         assertEquals("Vence hoy · $ 40.000,00", notifications.rows.getLast().getMessage().replace(' ', ' '));
+    }
+
+    @Test
+    void conDebitoAutomaticoAvisaQueSeDebitaYNoComoVencido() {
+        UUID luz = services.save(org.acme.service.domain.model.Service.builder().userId(ana).providerId(UUID.randomUUID()).name("Luz")
+                .category(org.acme.shared.domain.model.ServiceCategory.values()[0]).autoDebit(true).build()).getId();
+        UUID tomorrow = obligation("Luz", "40000", LocalDate.of(2026, 11, 27));
+        UUID inThreeDays = obligation("Luz diciembre", "40000", LocalDate.of(2026, 11, 29));
+        UUID past = obligation("Luz pasada", "40000", LocalDate.of(2026, 11, 20));
+        for (UUID id : List.of(tomorrow, inThreeDays, past)) {
+            obligations.rows.get(id).setServiceId(luz);
+        }
+
+        assertEquals(2, at("2026-11-26T12:00:00Z").generate(), "solo el de mañana, en la app y por email");
+        assertEquals("Se debita mañana · $ 40.000,00", notifications.rows.getFirst().getMessage().replace(' ', ' '));
+        assertTrue(notifications.rows.stream().noneMatch(n -> n.getNotificationType() == NotificationType.OBLIGATION_OVERDUE));
     }
 
     @Test

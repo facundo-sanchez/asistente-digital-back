@@ -18,7 +18,7 @@ class ServiceRequestTest {
 
     private int errors(String paymentUrl) {
         var request = new ServiceRequest(UUID.randomUUID(), "Gas casa", null, ServiceCategory.values()[0],
-                BillingFrequency.MONTHLY, null, null, null, paymentUrl, null);
+                BillingFrequency.MONTHLY, null, null, null, paymentUrl, false, null, null);
         return validator.validate(request).size();
     }
 

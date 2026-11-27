@@ -13,6 +13,7 @@ import org.acme.notification.domain.model.NotificationType;
 import org.acme.obligation.application.port.output.ObligationRepository;
 import org.acme.obligation.domain.model.EffectiveObligationStatus;
 import org.acme.obligation.domain.model.ObligationSummary;
+import org.acme.service.application.port.output.ServiceRepository;
 import org.acme.user.application.port.output.UserRepository;
 import org.acme.user.domain.model.User;
 
@@ -27,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -50,16 +52,19 @@ public class GenerateNotificationsUseCase {
     private final ObligationRepository obligations;
     private final DocumentRepository documents;
     private final UserRepository users;
+    private final ServiceRepository services;
     private final Clock clock;
 
     @Inject
     public GenerateNotificationsUseCase(NotificationRepository notifications, NotificationPreferencesUseCase preferences,
-                                        ObligationRepository obligations, DocumentRepository documents, UserRepository users, Clock clock) {
+                                        ObligationRepository obligations, DocumentRepository documents, UserRepository users,
+                                        ServiceRepository services, Clock clock) {
         this.notifications = notifications;
         this.preferences = preferences;
         this.obligations = obligations;
         this.documents = documents;
         this.users = users;
+        this.services = services;
         this.clock = clock;
     }
 
@@ -79,12 +84,21 @@ public class GenerateNotificationsUseCase {
         NotificationSettings settings = preferences.settings(userId);
         int maxDays = NotificationSettings.CHANNELS.stream().flatMap(c -> settings.days(c).stream()).max(Integer::compare).orElse(0);
         int created = 0;
+        Set<UUID> autoDebit = services.findAutoDebitIds(userId);
 
         for (ObligationSummary o : obligations.findDueBetween(userId, today, today.plusDays(maxDays))) {
             if (!unpaid(o)) {
                 continue;
             }
             long daysLeft = ChronoUnit.DAYS.between(today, o.obligation().getDueDate());
+            if (debitsAlone(autoDebit, o)) {
+                // Se paga solo: un único aviso el día anterior (o el mismo día), con el texto del débito
+                if (daysLeft <= 1) {
+                    created += everywhere(settings, userId, NotificationType.OBLIGATION_DUE_SOON, "AUTO_DEBIT:" + o.obligation().getId(),
+                            o.obligation().getId(), null, o.obligation().getTitle(), (daysLeft == 0 ? "Se debita hoy" : "Se debita mañana") + amountText(o));
+                }
+                continue;
+            }
             for (NotificationChannel channel : NotificationSettings.CHANNELS) {
                 List<Integer> days = settings.days(channel);
                 if (settings.wants(channel, NotificationType.OBLIGATION_DUE_SOON) && !days.isEmpty() && daysLeft <= days.getLast()) {
@@ -95,7 +109,8 @@ public class GenerateNotificationsUseCase {
             }
         }
         for (ObligationSummary o : obligations.findDueBetween(userId, today.minusDays(OVERDUE_LOOKBACK), today.minusDays(1))) {
-            if (unpaid(o)) {
+            // Los de débito automático con importe los paga la tarea del débito: no son vencidos
+            if (unpaid(o) && !debitsAlone(autoDebit, o)) {
                 created += everywhere(settings, userId, NotificationType.OBLIGATION_OVERDUE, "OBLIGATION_OVERDUE:" + o.obligation().getId(),
                         o.obligation().getId(), null, o.obligation().getTitle(), "Se venció y no está pago" + amountText(o));
             }
@@ -143,6 +158,11 @@ public class GenerateNotificationsUseCase {
     /** El umbral más chico que alcanza a daysLeft (ej. faltan 2 días → umbral 3). thresholds va de menor a mayor. */
     static int threshold(List<Integer> thresholds, long daysLeft) {
         return thresholds.stream().filter(t -> t >= daysLeft).findFirst().orElse(thresholds.getLast());
+    }
+
+    /** Del débito automático y con importe: lo registra la tarea del débito (sin importe, se avisa como cualquier otro). */
+    private static boolean debitsAlone(Set<UUID> autoDebit, ObligationSummary o) {
+        return o.obligation().getServiceId() != null && autoDebit.contains(o.obligation().getServiceId()) && o.balance() != null;
     }
 
     private static boolean unpaid(ObligationSummary o) {

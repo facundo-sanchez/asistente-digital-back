@@ -33,6 +33,10 @@ public class Service {
     private String notes;
     /** Página donde se pagan sus facturas (https). */
     private String paymentUrl;
+    /** Se paga solo por débito automático: su vencimiento se da por pagado el día que vence. */
+    private boolean autoDebit;
+    /** Con qué se debita (texto libre). */
+    private String autoDebitMethod;
     @Builder.Default
     private Map<String, Object> metadata = new HashMap<>();
     private Instant createdAt;

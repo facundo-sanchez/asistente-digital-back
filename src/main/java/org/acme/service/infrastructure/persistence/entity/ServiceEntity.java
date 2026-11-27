@@ -61,6 +61,12 @@ public class ServiceEntity {
     @Column(name = "payment_url", length = 500)
     private String paymentUrl;
 
+    @Column(name = "auto_debit", nullable = false)
+    private boolean autoDebit;
+
+    @Column(name = "auto_debit_method", length = 100)
+    private String autoDebitMethod;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();

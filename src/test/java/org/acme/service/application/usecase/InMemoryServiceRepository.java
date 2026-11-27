@@ -27,6 +27,12 @@ public class InMemoryServiceRepository implements ServiceRepository {
     }
 
     @Override
+    public java.util.Set<UUID> findAutoDebitIds(UUID userId) {
+        return rows.values().stream().filter(s -> s.getUserId().equals(userId) && s.isAutoDebit() && s.isActive())
+                .map(Service::getId).collect(Collectors.toSet());
+    }
+
+    @Override
     public Map<UUID, String> findNames(UUID userId, Collection<UUID> serviceIds) {
         // Inmutable como el del adaptador real (Map.of / toMap + copyOf): get(null) falla igual
         return Map.copyOf(rows.values().stream()

@@ -23,6 +23,8 @@ public record ServiceResponse(
         boolean active,
         String notes,
         String paymentUrl,
+        boolean autoDebit,
+        String autoDebitMethod,
         Map<String, Object> metadata,
         Instant createdAt,
         Instant updatedAt
