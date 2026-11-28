@@ -30,6 +30,6 @@ public class LoanResponseMapper {
     }
 
     private ObligationResponse installment(ObligationSummary s) {
-        return obligations.toResponse(s, null, null);
+        return obligations.toResponse(s, null, null, false);
     }
 }

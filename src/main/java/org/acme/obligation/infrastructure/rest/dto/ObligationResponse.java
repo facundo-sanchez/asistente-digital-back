@@ -17,6 +17,7 @@ public record ObligationResponse(
         UUID serviceId,
         @Schema(description = "Nombre del servicio asociado (null si no tiene)", example = "Luz casa") String serviceName,
         @Schema(description = "Categoría del servicio (da su color en las listas)") ServiceCategory serviceCategory,
+        @Schema(description = "El servicio se paga por débito automático") boolean serviceAutoDebit,
         UUID invoiceId,
         UUID assetId,
         UUID recurrenceId,

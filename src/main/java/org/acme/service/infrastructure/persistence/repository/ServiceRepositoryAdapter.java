@@ -86,6 +86,15 @@ public class ServiceRepositoryAdapter implements ServiceRepository {
     }
 
     @Override
+    public java.util.Set<UUID> findAutoDebit(UUID userId, Collection<UUID> serviceIds) {
+        if (serviceIds.isEmpty()) {
+            return java.util.Set.of();
+        }
+        return repository.list("userId = ?1 and id in ?2 and autoDebit = true", userId, serviceIds).stream()
+                .map(ServiceEntity::getId).collect(Collectors.toSet());
+    }
+
+    @Override
     public PageResult<Service> findForUser(UUID userId, ServiceFilter filter, PageQuery page) {
         StringBuilder where = new StringBuilder("userId = :userId");
         Parameters params = Parameters.with("userId", userId);

@@ -16,10 +16,10 @@ import org.mapstruct.*;
 public interface ObligationRestMapper {
 
     @Mapping(target = ".", source = "summary.obligation")
-    ObligationResponse toResponse(ObligationSummary summary, String serviceName, ServiceCategory serviceCategory);
+    ObligationResponse toResponse(ObligationSummary summary, String serviceName, ServiceCategory serviceCategory, boolean serviceAutoDebit);
 
     default ObligationResponse toResponse(ObligationView view) {
-        return toResponse(view.summary(), view.serviceName(), view.serviceCategory());
+        return toResponse(view.summary(), view.serviceName(), view.serviceCategory(), view.serviceAutoDebit());
     }
 
     @Mapping(target = "id", ignore = true)

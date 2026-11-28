@@ -33,6 +33,9 @@ public interface ServiceRepository {
     /** Categoría de cada servicio del usuario, para el color en las listas. */
     Map<UUID, ServiceCategory> findCategories(UUID userId, Collection<UUID> serviceIds);
 
+    /** De esos servicios, los que se pagan por débito automático (módulo 17). */
+    java.util.Set<UUID> findAutoDebit(UUID userId, Collection<UUID> serviceIds);
+
     /** Ordenados por nombre. */
     PageResult<Service> findForUser(UUID userId, ServiceFilter filter, PageQuery page);
 }
