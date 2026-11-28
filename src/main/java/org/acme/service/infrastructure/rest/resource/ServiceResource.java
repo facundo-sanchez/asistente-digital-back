@@ -53,6 +53,9 @@ public class ServiceResource {
     RegisterServiceUseCase registerService;
 
     @Inject
+    org.acme.service.application.usecase.ServiceExtractionUseCase serviceExtraction;
+
+    @Inject
     ServiceQueryUseCase serviceQuery;
 
     @Inject
@@ -65,9 +68,11 @@ public class ServiceResource {
     CurrentUser currentUser;
 
     @POST
-    @Operation(summary = "Registrar un servicio", description = "Queda activo. El proveedor debe ser del catálogo o propio")
-    public Response register(@Valid @NotNull ServiceRequest request) {
-        ServiceResponse body = mapper.toResponse(registerService.register(currentUser.id(), mapper.toModel(request)));
+    @Operation(summary = "Registrar un servicio", description = "Queda activo. El proveedor debe ser del catálogo o propio. extractionId: viene de un comprobante leído con IA")
+    public Response register(@Valid @NotNull ServiceRequest request, @QueryParam("extractionId") UUID extractionId) {
+        ServiceResponse body = mapper.toResponse(extractionId == null
+                ? registerService.register(currentUser.id(), mapper.toModel(request))
+                : serviceExtraction.createFromProof(currentUser.id(), extractionId, mapper.toModel(request)));
         return Response.status(Response.Status.CREATED).entity(body).build();
     }
 
