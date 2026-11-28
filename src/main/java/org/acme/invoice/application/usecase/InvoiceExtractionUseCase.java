@@ -15,6 +15,8 @@ import org.acme.invoice.application.model.InvoiceView;
 import org.acme.invoice.application.port.output.InvoiceRepository;
 import org.acme.invoice.domain.model.Invoice;
 import org.acme.invoice.domain.model.InvoiceSource;
+import org.acme.provider.application.usecase.ProviderMatcher;
+import org.acme.provider.domain.model.Provider;
 import org.acme.integration.application.model.EmailOrigin;
 import org.acme.integration.application.port.output.EmailOriginRepository;
 import org.acme.service.application.model.ServiceFilter;
@@ -48,16 +50,19 @@ public class InvoiceExtractionUseCase {
     private final RegisterInvoiceUseCase registerInvoice;
     private final ObjectMapper json;
     private final EmailOriginRepository origins;
+    private final ProviderMatcher providers;
 
     @Inject
     public InvoiceExtractionUseCase(ExtractionReviews reviews, ServiceRepository services, InvoiceRepository invoices,
-                                    RegisterInvoiceUseCase registerInvoice, ObjectMapper json, EmailOriginRepository origins) {
+                                    RegisterInvoiceUseCase registerInvoice, ObjectMapper json, EmailOriginRepository origins,
+                                    ProviderMatcher providers) {
         this.reviews = reviews;
         this.services = services;
         this.invoices = invoices;
         this.registerInvoice = registerInvoice;
         this.json = json;
         this.origins = origins;
+        this.providers = providers;
     }
 
     public InvoiceReview review(UUID userId, UUID extractionId) {
@@ -67,7 +72,10 @@ public class InvoiceExtractionUseCase {
         // Si llegó por Gmail y ya se asoció a un servicio, ese manda
         Optional<Service> service = origin.map(EmailOrigin::serviceId).flatMap(id -> services.findByIdForUser(userId, id))
                 .or(() -> suggestService(userId, invoice));
-        UUID providerId = origin.map(EmailOrigin::providerId).orElse(null);
+        // Por email ya se sabe el proveedor; subida a mano, se reconoce por el nombre leído (para registrar el servicio)
+        UUID providerId = origin.map(EmailOrigin::providerId)
+                .or(() -> service.isEmpty() ? providers.match(userId, invoice.provider()).map(Provider::getId) : Optional.empty())
+                .orElse(null);
         List<String> warnings = new ArrayList<>();
         if (service.isEmpty()) {
             warnings.add(providerId != null

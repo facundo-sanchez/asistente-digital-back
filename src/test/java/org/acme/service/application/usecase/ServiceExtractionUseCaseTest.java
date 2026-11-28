@@ -9,6 +9,7 @@ import org.acme.document.domain.model.AiExtractionResult;
 import org.acme.document.domain.model.Document;
 import org.acme.document.domain.model.ExtractionValidationStatus;
 import org.acme.provider.application.usecase.InMemoryProviderRepository;
+import org.acme.provider.application.usecase.ProviderMatcher;
 import org.acme.provider.application.usecase.ProviderQueryUseCase;
 import org.acme.provider.domain.model.Provider;
 import org.acme.service.application.model.ServiceProofReview;
@@ -42,7 +43,7 @@ class ServiceExtractionUseCaseTest {
         camuzzi = providers.add(Provider.builder().name("Camuzzi Gas Pampeana").code("CAMUZZI").category(ServiceCategory.GAS).build());
         ExtractionReviews reviews = new ExtractionReviews(extractions, documents, new InMemoryProcessingJobRepository(),
                 Clock.fixed(Instant.parse("2026-11-28T12:00:00Z"), ZoneOffset.UTC));
-        useCase = new ServiceExtractionUseCase(reviews, new ProviderQueryUseCase(providers),
+        useCase = new ServiceExtractionUseCase(reviews, new ProviderMatcher(new ProviderQueryUseCase(providers)),
                 new RegisterServiceUseCase(new InMemoryServiceRepository(), new ServiceDraftValidator(providers)), new ObjectMapper());
     }
 

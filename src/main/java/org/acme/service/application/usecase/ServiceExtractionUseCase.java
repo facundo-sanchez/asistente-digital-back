@@ -7,17 +7,15 @@ import jakarta.transaction.Transactional;
 import org.acme.document.application.usecase.ExtractionReviews;
 import org.acme.document.domain.model.AiExtractionResult;
 import org.acme.document.domain.model.ExtractionValidationStatus;
-import org.acme.provider.application.usecase.ProviderQueryUseCase;
+import org.acme.provider.application.usecase.ProviderMatcher;
 import org.acme.provider.domain.model.Provider;
 import org.acme.service.application.model.ExtractedServiceProof;
 import org.acme.service.application.model.ServiceProofReview;
 import org.acme.service.application.model.ServiceView;
 import org.acme.service.domain.model.Service;
-import org.acme.shared.application.model.PageQuery;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -28,12 +26,12 @@ import java.util.UUID;
 public class ServiceExtractionUseCase {
 
     private final ExtractionReviews reviews;
-    private final ProviderQueryUseCase providers;
+    private final ProviderMatcher providers;
     private final RegisterServiceUseCase register;
     private final ObjectMapper json;
 
     @Inject
-    public ServiceExtractionUseCase(ExtractionReviews reviews, ProviderQueryUseCase providers, RegisterServiceUseCase register, ObjectMapper json) {
+    public ServiceExtractionUseCase(ExtractionReviews reviews, ProviderMatcher providers, RegisterServiceUseCase register, ObjectMapper json) {
         this.reviews = reviews;
         this.providers = providers;
         this.register = register;
@@ -43,7 +41,7 @@ public class ServiceExtractionUseCase {
     public ServiceProofReview review(UUID userId, UUID extractionId) {
         AiExtractionResult result = reviews.find(userId, extractionId, ExtractedServiceProof.SCHEMA_VERSION);
         ExtractedServiceProof proof = json.convertValue(result.getExtractedData(), ExtractedServiceProof.class);
-        Provider provider = matchProvider(userId, proof.providerName()).orElse(null);
+        Provider provider = providers.match(userId, proof.providerName()).orElse(null);
         List<String> warnings = new ArrayList<>();
         if (provider == null) {
             warnings.add(proof.providerName() == null
@@ -65,21 +63,4 @@ public class ServiceExtractionUseCase {
         return view;
     }
 
-    /** Busca el proveedor por el nombre completo y, si no aparece, por su primera palabra ("Camuzzi Gas Pampeana S.A." → "Camuzzi"). */
-    Optional<Provider> matchProvider(UUID userId, String name) {
-        if (name == null || name.isBlank()) {
-            return Optional.empty();
-        }
-        String clean = name.replaceAll("(?i)\\b(s\\.?a\\.?|s\\.?r\\.?l\\.?|s\\.?a\\.?u\\.?)\\s*$", "").trim();
-        Optional<Provider> full = first(userId, clean);
-        if (full.isPresent()) {
-            return full;
-        }
-        String firstWord = clean.split("\\s+")[0];
-        return firstWord.length() >= 4 ? first(userId, firstWord) : Optional.empty();
-    }
-
-    private Optional<Provider> first(UUID userId, String text) {
-        return providers.list(userId, text, null, new PageQuery(0, 1)).content().stream().findFirst();
-    }
 }
