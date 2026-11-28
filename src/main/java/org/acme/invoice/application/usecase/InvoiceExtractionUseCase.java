@@ -78,7 +78,8 @@ public class InvoiceExtractionUseCase {
                 .orElse(null);
         List<String> warnings = new ArrayList<>();
         if (service.isEmpty()) {
-            warnings.add(providerId != null
+            // El mensaje de email solo si de verdad llegó por email (subida a mano el proveedor se reconoce por nombre)
+            warnings.add(origin.isPresent()
                     ? "Te llegó por email de un proveedor que todavía no registraste como servicio: registralo y después confirmá."
                     : "No encontramos el servicio de esta factura: elegilo o registralo.");
         }
