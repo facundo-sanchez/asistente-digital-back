@@ -67,6 +67,22 @@ class DocumentProcessingQueueTest {
     }
 
     @Test
+    void sePuedeVolverALeerComoOtroTipoSinSubirloDeNuevo() {
+        UUID proof = documents.save(Document.builder().userId(ANA).documentType(DocumentType.CONTRACT).originalFilename("luz.pdf")
+                .checksum("x").storageKey("k").serviceId(UUID.randomUUID()).build()).getId();
+
+        assertThrows(ServiceException.class, () -> processing.requestAs(ANA, proof, DocumentType.POLICY), "tipo sin procesador");
+        assertEquals(DocumentType.CONTRACT, documents.findByIdForUser(ANA, proof).orElseThrow().getDocumentType(), "no cambia si no se puede leer");
+
+        processing.requestAs(ANA, proof, DocumentType.CARD_STATEMENT);
+
+        Document document = documents.findByIdForUser(ANA, proof).orElseThrow();
+        assertEquals(DocumentType.CARD_STATEMENT, document.getDocumentType());
+        assertNotNull(document.getServiceId(), "conserva el servicio");
+        assertEquals(ProcessingStatus.PENDING, document.getProcessingStatus());
+    }
+
+    @Test
     void terminaListoParaRevisar() {
         UUID id = processing.request(ANA, statement).getId();
 
