@@ -25,11 +25,13 @@ public class AssistantToolbox {
     final DocumentQueryUseCase documents;
     final ObjectMapper json;
     final org.acme.loan.application.usecase.LoanUseCase loans;
+    final org.acme.card.application.usecase.CardSubscriptionUseCase subscriptions;
 
     @Inject
     public AssistantToolbox(ObligationQueryUseCase obligations, InvoiceQueryUseCase invoices, ServiceQueryUseCase services,
                             DashboardUseCase dashboard, CardReportUseCase cards, DocumentQueryUseCase documents, ObjectMapper json,
-                            org.acme.loan.application.usecase.LoanUseCase loans) {
+                            org.acme.loan.application.usecase.LoanUseCase loans,
+                            org.acme.card.application.usecase.CardSubscriptionUseCase subscriptions) {
         this.obligations = obligations;
         this.invoices = invoices;
         this.services = services;
@@ -38,6 +40,7 @@ public class AssistantToolbox {
         this.documents = documents;
         this.json = json;
         this.loans = loans;
+        this.subscriptions = subscriptions;
     }
 
     public AssistantTools forUser(UUID userId, LocalDate today) {

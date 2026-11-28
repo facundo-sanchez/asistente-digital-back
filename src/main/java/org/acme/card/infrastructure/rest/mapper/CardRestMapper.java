@@ -1,5 +1,6 @@
 package org.acme.card.infrastructure.rest.mapper;
 
+import org.acme.card.application.model.CardSubscriptions;
 import org.acme.card.application.model.PendingInstallments;
 import org.acme.card.application.model.CardStatementView;
 import org.acme.card.domain.model.*;
@@ -91,4 +92,6 @@ public interface CardRestMapper {
     CardSpendingReportResponse toResponse(CardSpendingReport report);
 
     PendingInstallmentsResponse toResponse(PendingInstallments pending);
+
+    CardSubscriptionsResponse toResponse(CardSubscriptions subscriptions);
 }

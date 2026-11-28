@@ -76,6 +76,7 @@ public class AssistantTools {
                 case "expiringDocuments" -> expiringDocuments();
                 case "searchDocuments" -> searchDocuments(args.path("text").asText(""));
                 case "loans" -> loans();
+                case "subscriptions" -> subscriptions();
                 default -> Map.of("error", "No existe la herramienta " + request.name());
             };
             return box.json.writeValueAsString(result);
@@ -203,6 +204,15 @@ public class AssistantTools {
             });
             return item;
         }).toList();
+    }
+
+    @Tool("Suscripciones que se cobran todos los meses en las tarjetas (Netflix, Spotify, gimnasio…): último importe, desde cuándo, aumento y total por mes por moneda")
+    public Object subscriptions() {
+        var result = box.subscriptions.list(userId, null);
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("suscripciones", result.items());
+        item.put("totalPorMes", result.totals());
+        return item;
     }
 
     private Object obligationList(ObligationFilter filter) {

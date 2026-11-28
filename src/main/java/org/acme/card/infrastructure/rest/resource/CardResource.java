@@ -18,12 +18,15 @@ import jakarta.ws.rs.core.Response;
 import org.acme.card.application.model.CardView;
 import org.acme.card.application.model.SpendingFilter;
 import org.acme.card.application.usecase.CardReportUseCase;
+import org.acme.card.application.usecase.CardSubscriptionUseCase;
 import org.acme.card.application.usecase.ManageCardStatementUseCase;
 import org.acme.card.application.usecase.ManageCardUseCase;
 import org.acme.card.infrastructure.rest.dto.CardRequest;
 import org.acme.card.infrastructure.rest.dto.CardResponse;
 import org.acme.card.infrastructure.rest.dto.CardSpendingReportResponse;
 import org.acme.card.infrastructure.rest.dto.PendingInstallmentsResponse;
+import org.acme.card.infrastructure.rest.dto.CardSubscriptionsResponse;
+import org.acme.card.infrastructure.rest.dto.SubscriptionMerchantRequest;
 import org.acme.card.infrastructure.rest.dto.CardStatementResponse;
 import org.acme.card.infrastructure.rest.dto.CardStatusRequest;
 import org.acme.card.infrastructure.rest.mapper.CardRestMapper;
@@ -53,6 +56,9 @@ public class CardResource {
 
     @Inject
     CardReportUseCase report;
+
+    @Inject
+    CardSubscriptionUseCase subscriptions;
 
     @Inject
     CardRestMapper mapper;
@@ -119,5 +125,26 @@ public class CardResource {
     @Operation(summary = "Cuotas pendientes", description = "Por compra: cuota actual, cuántas faltan y cuánto; total por moneda")
     public PendingInstallmentsResponse pendingInstallments() {
         return mapper.toResponse(report.pending(currentUser.id()));
+    }
+
+    @GET
+    @Path("/subscriptions")
+    @Operation(summary = "Suscripciones", description = "Comercios cobrados en 3 de los últimos 4 resúmenes, total mensual por moneda y los ocultos")
+    public CardSubscriptionsResponse subscriptions(@QueryParam("cardId") UUID cardId) {
+        return mapper.toResponse(subscriptions.list(currentUser.id(), cardId));
+    }
+
+    @POST
+    @Path("/subscriptions/dismiss")
+    @Operation(summary = "No es una suscripción", description = "Oculta el comercio; se recuerda en los próximos cálculos")
+    public void dismissSubscription(@Valid @NotNull SubscriptionMerchantRequest request) {
+        subscriptions.dismiss(currentUser.id(), request.merchant());
+    }
+
+    @POST
+    @Path("/subscriptions/restore")
+    @Operation(summary = "Volver a mostrar una suscripción oculta")
+    public void restoreSubscription(@Valid @NotNull SubscriptionMerchantRequest request) {
+        subscriptions.restore(currentUser.id(), request.merchant());
     }
 }

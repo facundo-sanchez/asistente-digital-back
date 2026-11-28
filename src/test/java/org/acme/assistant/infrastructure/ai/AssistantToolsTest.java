@@ -27,7 +27,7 @@ class AssistantToolsTest {
         UUID gas = obligations.save(obligation(ana, "Gas")).obligation().getId();
         obligations.save(obligation(beto, "Luz de Beto"));
         AssistantToolbox box = new AssistantToolbox(new ObligationQueryUseCase(obligations, new InMemoryServiceRepository()),
-                null, null, null, null, null, new ObjectMapper().findAndRegisterModules(), null);
+                null, null, null, null, null, new ObjectMapper().findAndRegisterModules(), null, null);
         AssistantTools tools = box.forUser(ana, TODAY);
 
         String result = tools.execute(ToolExecutionRequest.builder().name("upcomingObligations").arguments("{\"days\": 7}").build());
@@ -41,7 +41,7 @@ class AssistantToolsTest {
 
     @Test
     void unaHerramientaQueNoExisteVuelveComoError() {
-        AssistantTools tools = new AssistantToolbox(null, null, null, null, null, null, new ObjectMapper(), null).forUser(UUID.randomUUID(), TODAY);
+        AssistantTools tools = new AssistantToolbox(null, null, null, null, null, null, new ObjectMapper(), null, null).forUser(UUID.randomUUID(), TODAY);
 
         assertTrue(tools.execute(ToolExecutionRequest.builder().name("deleteEverything").arguments("{}").build()).contains("error"));
     }
