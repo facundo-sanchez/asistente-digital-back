@@ -32,12 +32,21 @@ public class InMemoryInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
-    public List<Invoice> findLastConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, int limit) {
-        return rows.values().stream()
-                .filter(i -> i.getUserId().equals(userId) && serviceId.equals(i.getServiceId()) && currency.equals(i.getCurrency())
-                        && !i.getId().equals(excludeId) && i.getStatus() == org.acme.invoice.domain.model.InvoiceStatus.CONFIRMED)
+    public List<Invoice> findLastConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, java.time.LocalDate before, int limit) {
+        return confirmed(userId, serviceId, currency, excludeId).filter(i -> i.getDueDate().isBefore(before))
                 .sorted(java.util.Comparator.comparing(Invoice::getDueDate).reversed())
                 .limit(limit).toList();
+    }
+
+    @Override
+    public java.util.Optional<Invoice> findNextConfirmed(UUID userId, UUID serviceId, String currency, UUID excludeId, java.time.LocalDate after) {
+        return confirmed(userId, serviceId, currency, excludeId).filter(i -> i.getDueDate().isAfter(after))
+                .min(java.util.Comparator.comparing(Invoice::getDueDate));
+    }
+
+    private java.util.stream.Stream<Invoice> confirmed(UUID userId, UUID serviceId, String currency, UUID excludeId) {
+        return rows.values().stream().filter(i -> i.getUserId().equals(userId) && serviceId.equals(i.getServiceId()) && currency.equals(i.getCurrency())
+                && !i.getId().equals(excludeId) && i.getStatus() == org.acme.invoice.domain.model.InvoiceStatus.CONFIRMED);
     }
 
     @Override

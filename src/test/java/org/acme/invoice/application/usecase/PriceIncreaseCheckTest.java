@@ -63,6 +63,18 @@ class PriceIncreaseCheckTest {
         assertEquals(1, alerts.size(), "15 % con umbral 10");
     }
 
+    @Test
+    void cargarUnaFacturaViejaRecalculaLaSiguienteSinAvisar() {
+        Invoice noviembre = invoice("73529.61", 11, "ARS");
+        assertNull(check.check(noviembre, "Luz", UUID.randomUUID()).getPriceIncrease(), "sin anteriores no hay con qué comparar");
+
+        Invoice mayo = check.check(invoice("59895.81", 5, "ARS"), "Luz", UUID.randomUUID());
+
+        assertNull(mayo.getPriceIncrease(), "mayo no se compara con noviembre, que es posterior");
+        assertEquals(0, new BigDecimal("22.8").compareTo(invoices.findByIdForUser(ana, noviembre.getId()).orElseThrow().getPriceIncrease()));
+        assertTrue(alerts.isEmpty(), "es historial: no se avisa");
+    }
+
     private Invoice invoice(String amount, int month, String currency) {
         return invoices.save(Invoice.builder().userId(ana).serviceId(gas).totalAmount(new BigDecimal(amount)).currency(currency)
                 .dueDate(LocalDate.of(2026, month, 10)).status(InvoiceStatus.CONFIRMED).build());
