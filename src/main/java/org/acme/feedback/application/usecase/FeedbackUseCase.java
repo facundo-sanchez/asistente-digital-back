@@ -4,8 +4,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.acme.domain.exceptions.ServiceException;
 import org.acme.feedback.application.port.output.FeedbackRepository;
+import org.acme.feedback.application.model.FeedbackEntry;
 import org.acme.feedback.domain.model.Feedback;
 import org.acme.feedback.domain.model.FeedbackKind;
+
+import org.acme.shared.application.model.PageQuery;
+import org.acme.shared.application.model.PageResult;
 
 import java.time.Clock;
 import java.util.List;
@@ -44,6 +48,11 @@ public class FeedbackUseCase {
 
     public List<Feedback> recent(UUID userId) {
         return repository.findForUser(userId, RECENT);
+    }
+
+    /** Administración: lo que mandaron todos los usuarios (el permiso lo controla el endpoint). */
+    public PageResult<FeedbackEntry> all(FeedbackKind kind, PageQuery page) {
+        return repository.findAll(kind, page);
     }
 
     /** Lo que llega del navegador se recorta en vez de rechazarse: un reporte largo no debe perderse. */
