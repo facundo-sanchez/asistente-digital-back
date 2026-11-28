@@ -36,24 +36,47 @@ public class PriceIncreaseCheck {
 
     /** Devuelve la factura con el porcentaje guardado si subió del umbral, o la misma factura si no. */
     public Invoice check(Invoice invoice, String serviceName, UUID obligationId) {
-        if (invoice.getServiceId() == null || invoice.getTotalAmount() == null || invoice.getCurrency() == null) {
+        if (invoice.getServiceId() == null || invoice.getTotalAmount() == null || invoice.getCurrency() == null || invoice.getDueDate() == null) {
             return invoice;
         }
-        List<Invoice> previous = invoices.findLastConfirmed(invoice.getUserId(), invoice.getServiceId(), invoice.getCurrency(), invoice.getId(), HISTORY);
-        if (previous.isEmpty()) {
-            return invoice;
-        }
-        BigDecimal average = previous.stream().map(Invoice::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(previous.size()), 2, RoundingMode.HALF_UP);
-        BigDecimal percent = percentAbove(invoice.getTotalAmount(), average);
-        int threshold = users.findById(invoice.getUserId()).map(User::getPriceIncreaseThreshold).orElse(User.DEFAULT_PRICE_INCREASE_THRESHOLD);
-        if (percent == null || percent.compareTo(BigDecimal.valueOf(threshold)) < 0) {
+        // Cargar una factura vieja cambia el historial de la siguiente: se recalcula sin avisar (no es una factura nueva)
+        invoices.findNextConfirmed(invoice.getUserId(), invoice.getServiceId(), invoice.getCurrency(), invoice.getId(), invoice.getDueDate())
+                .ifPresent(next -> {
+                    BigDecimal percent = increase(next);
+                    if (percent == null ? next.getPriceIncrease() != null : next.getPriceIncrease() == null || percent.compareTo(next.getPriceIncrease()) != 0) {
+                        next.setPriceIncrease(percent);
+                        invoices.save(next);
+                    }
+                });
+        BigDecimal percent = increase(invoice);
+        if (percent == null) {
             return invoice;
         }
         invoice.setPriceIncrease(percent);
         Invoice saved = invoices.save(invoice);
-        alerts.increased(saved, serviceName, obligationId, percent, average);
+        alerts.increased(saved, serviceName, obligationId, percent, average(previous(invoice)));
         return saved;
+    }
+
+    /** El % sobre el promedio de las (hasta 3) anteriores por vencimiento, si llega al umbral del usuario; si no, null. */
+    private BigDecimal increase(Invoice invoice) {
+        List<Invoice> previous = previous(invoice);
+        if (previous.isEmpty()) {
+            return null;
+        }
+        BigDecimal percent = percentAbove(invoice.getTotalAmount(), average(previous));
+        int threshold = users.findById(invoice.getUserId()).map(User::getPriceIncreaseThreshold).orElse(User.DEFAULT_PRICE_INCREASE_THRESHOLD);
+        return percent == null || percent.compareTo(BigDecimal.valueOf(threshold)) < 0 ? null : percent;
+    }
+
+    /** Solo las que vencen antes: una factura no se compara con las posteriores. */
+    private List<Invoice> previous(Invoice invoice) {
+        return invoices.findLastConfirmed(invoice.getUserId(), invoice.getServiceId(), invoice.getCurrency(), invoice.getId(), invoice.getDueDate(), HISTORY);
+    }
+
+    private static BigDecimal average(List<Invoice> previous) {
+        return previous.stream().map(Invoice::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(previous.size()), 2, RoundingMode.HALF_UP);
     }
 
     /** Cuánto está amount por encima de average, en % con un decimal; null si average es cero. */

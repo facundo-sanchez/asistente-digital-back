@@ -49,6 +49,8 @@ class InvoiceExtractionUseCaseTest {
     private InMemoryDocumentRepository documents;
     private InvoiceExtractionUseCase useCase;
     private UUID gas;
+    private UUID coopelectric;
+    private final org.acme.provider.application.usecase.InMemoryProviderRepository providers = new org.acme.provider.application.usecase.InMemoryProviderRepository();
 
     @BeforeEach
     void setUp() {
@@ -58,11 +60,23 @@ class InvoiceExtractionUseCaseTest {
         documents = new InMemoryDocumentRepository();
         gas = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Gas casa").customerReference("101234567").build()).getId();
         services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build());
+        coopelectric = providers.add(org.acme.provider.domain.model.Provider.builder().name("Coopelectric").code("COOPELECTRIC")
+                .category(org.acme.shared.domain.model.ServiceCategory.WATER).build()).getId();
         Clock clock = Clock.fixed(Instant.parse("2026-11-26T12:00:00Z"), ZoneOffset.UTC);
         var register = new RegisterInvoiceUseCase(invoices, new InMemoryObligationRepository(),
                 new InvoiceDraftValidator(services, documents, invoices), new PriceIncreaseCheck(invoices, new org.acme.user.application.usecase.InMemoryUserRepository(Clock.systemUTC()), (i, n, o, p, a2) -> {}), clock);
         useCase = new InvoiceExtractionUseCase(new ExtractionReviews(extractions, documents, new InMemoryProcessingJobRepository(), clock),
-                services, invoices, register, json, documentId -> java.util.Optional.empty());
+                services, invoices, register, json, documentId -> java.util.Optional.empty(),
+                new org.acme.provider.application.usecase.ProviderMatcher(new org.acme.provider.application.usecase.ProviderQueryUseCase(providers)));
+    }
+
+    @Test
+    void subidaAManoSinServicioReconoceElProveedorParaRegistrarlo() {
+        InvoiceReview review = useCase.review(ANA, extraction(new ExtractedInvoice("Coopelectric Ltda.", "73812", null, "2025-12",
+                null, LocalDate.of(2026, 2, 16), new BigDecimal("9042.56"), "ARS", null)));
+
+        assertNull(review.suggestedServiceId());
+        assertEquals(coopelectric, review.suggestedProviderId());
     }
 
     @Test

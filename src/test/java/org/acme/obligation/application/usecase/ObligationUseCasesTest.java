@@ -41,7 +41,7 @@ class ObligationUseCasesTest {
     void setUp() {
         obligations = new InMemoryObligationRepository();
         InMemoryServiceRepository services = new InMemoryServiceRepository();
-        anaLight = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").build()).getId();
+        anaLight = services.save(Service.builder().userId(ANA).providerId(UUID.randomUUID()).name("Luz casa").autoDebit(true).build()).getId();
         betoGas = services.save(Service.builder().userId(BETO).providerId(UUID.randomUUID()).name("Gas Beto").build()).getId();
         ObligationDraftValidator validator = new ObligationDraftValidator(services);
         register = new RegisterObligationUseCase(obligations, validator);
@@ -80,6 +80,9 @@ class ObligationUseCasesTest {
         assertEquals(List.of("Luz noviembre"), titles(new ObligationFilter(null, null, anaLight, null, null, null)));
         assertEquals(List.of("VTV auto"), titles(new ObligationFilter(null, null, null, null, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31))));
         assertEquals(List.of(), titles(new ObligationFilter(null, Set.of(EffectiveObligationStatus.PAID), null, null, null, null)));
+        // La luz se debita sola: la lista lo marca para mostrar "Se debita sola"; la VTV (sin servicio) no
+        assertEquals(List.of(true, false), query.list(ANA, new ObligationFilter(null, null, null, null, null, null), FIRST_PAGE).content().stream()
+                .map(ObligationView::serviceAutoDebit).toList());
     }
 
     @Test

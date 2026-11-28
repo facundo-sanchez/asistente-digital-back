@@ -104,6 +104,21 @@ public class DocumentProcessingUseCase {
         return job;
     }
 
+    /**
+     * Vuelve a leer el documento como otro tipo, sin subirlo de nuevo (ej. la factura con la que se creó un servicio,
+     * ahora como factura). Conserva el servicio asociado. Si ya hay una lectura en curso, no cambia nada.
+     */
+    @Transactional
+    public DocumentProcessingJob requestAs(UUID userId, UUID documentId, DocumentType type) {
+        Document document = documents.findByIdForUser(userId, documentId).orElseThrow(() -> new NotFoundException("documento"));
+        if (jobs.findLatestForDocument(userId, documentId).filter(DocumentProcessingJob::isActive).isEmpty() && document.getDocumentType() != type) {
+            checkCanProcess(userId, type);
+            document.setDocumentType(type);
+            documents.save(document);
+        }
+        return request(userId, documentId);
+    }
+
     /** El último trabajo del documento, si alguna vez se pidió leerlo. */
     public Optional<DocumentProcessingJob> status(UUID userId, UUID documentId) {
         documents.findByIdForUser(userId, documentId).orElseThrow(() -> new NotFoundException("documento"));

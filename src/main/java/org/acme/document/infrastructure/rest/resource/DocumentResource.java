@@ -105,9 +105,10 @@ public class DocumentResource {
 
     @POST
     @Path("/{id}/process")
-    @Operation(summary = "Leer el documento con IA", description = "Encola la lectura (o devuelve la que está en curso). El pedido es el consentimiento para enviarlo a la IA")
-    public ProcessingJobResponse process(@PathParam("id") UUID id) {
-        return mapper.toResponse(processing.request(currentUser.id(), id));
+    @Operation(summary = "Leer el documento con IA", description = "Encola la lectura (o devuelve la que está en curso). El pedido es el consentimiento para enviarlo a la IA. "
+            + "as: leerlo como otro tipo (ej. el comprobante de un servicio nuevo, como factura)")
+    public ProcessingJobResponse process(@PathParam("id") UUID id, @QueryParam("as") DocumentType as) {
+        return mapper.toResponse(as == null ? processing.request(currentUser.id(), id) : processing.requestAs(currentUser.id(), id, as));
     }
 
     @GET

@@ -48,6 +48,12 @@ public class InMemoryServiceRepository implements ServiceRepository {
     }
 
     @Override
+    public java.util.Set<UUID> findAutoDebit(UUID userId, Collection<UUID> serviceIds) {
+        return rows.values().stream().filter(s -> s.getUserId().equals(userId) && serviceIds.contains(s.getId()) && s.isAutoDebit())
+                .map(Service::getId).collect(Collectors.toSet());
+    }
+
+    @Override
     public Service save(Service service) {
         Service copy = service.toBuilder().build();
         if (copy.getId() == null) {

@@ -41,7 +41,9 @@ public class ObligationQueryUseCase {
                 .filter(Objects::nonNull).collect(Collectors.toSet());
         Map<UUID, String> names = services.findNames(userId, serviceIds);
         Map<UUID, ServiceCategory> categories = services.findCategories(userId, serviceIds);
-        return result.map(summary -> new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary)));
+        Set<UUID> autoDebit = services.findAutoDebit(userId, serviceIds);
+        return result.map(summary -> new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary),
+                autoDebit.contains(summary.obligation().getServiceId())));
     }
 
     /** Una obligación de otro usuario responde igual que una inexistente. */
@@ -51,7 +53,8 @@ public class ObligationQueryUseCase {
         UUID serviceId = summary.obligation().getServiceId();
         Map<UUID, String> names = serviceId == null ? Map.of() : services.findNames(userId, Set.of(serviceId));
         Map<UUID, ServiceCategory> categories = serviceId == null ? Map.of() : services.findCategories(userId, Set.of(serviceId));
-        return new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary));
+        boolean autoDebit = serviceId != null && services.findAutoDebit(userId, Set.of(serviceId)).contains(serviceId);
+        return new ObligationView(summary, serviceValue(names, summary), serviceValue(categories, summary), autoDebit);
     }
 
     /** El dato del servicio de la obligación (null si no tiene; los mapas inmutables no aceptan get(null)). */
